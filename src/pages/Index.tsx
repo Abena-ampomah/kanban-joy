@@ -1,14 +1,27 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import { useAuth } from "@/contexts/AuthContext";
+import Auth from "./Auth";
+import AppSidebar from "@/components/AppSidebar";
+import KanbanBoard from "@/components/KanbanBoard";
+import AIChatbot from "@/components/AIChatbot";
 
-const Index = () => {
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-background">
-      <div className="text-center">
-        <h1 className="mb-4 text-4xl font-bold">Welcome to Your Blank App</h1>
-        <p className="text-xl text-muted-foreground">Start building your amazing project here!</p>
+export default function Index() {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
       </div>
+    );
+  }
+
+  if (!user) return <Auth />;
+
+  return (
+    <div className="flex h-screen bg-background overflow-hidden">
+      <AppSidebar />
+      <KanbanBoard />
+      <AIChatbot />
     </div>
   );
-};
-
-export default Index;
+}
