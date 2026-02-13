@@ -8,9 +8,9 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
 const COLUMNS = [
-  { id: "todo", title: "To Do", colorClass: "bg-kanban-todo/10 text-kanban-todo" },
-  { id: "in_progress", title: "In Progress", colorClass: "bg-kanban-progress/10 text-kanban-progress" },
-  { id: "completed", title: "Completed", colorClass: "bg-kanban-completed/10 text-kanban-completed" },
+  { id: "todo", title: "To-Do", colorClass: "bg-kanban-todo/15 text-kanban-todo", bgClass: "bg-[hsl(var(--kanban-todo-bg))]" },
+  { id: "in_progress", title: "In Progress", colorClass: "bg-kanban-progress/15 text-kanban-progress", bgClass: "bg-[hsl(var(--kanban-progress-bg))]" },
+  { id: "completed", title: "Completed", colorClass: "bg-kanban-completed/15 text-kanban-completed", bgClass: "bg-[hsl(var(--kanban-completed-bg))]" },
 ];
 
 export default function KanbanBoard() {
@@ -81,6 +81,7 @@ export default function KanbanBoard() {
                   title={col.title}
                   tasks={filteredTasks.filter((t) => t.status === col.id)}
                   colorClass={col.colorClass}
+                  bgClass={col.bgClass}
                   onAddTask={handleAddTask}
                   onUpdateTask={(id, updates) => updateTask.mutate({ id, ...updates })}
                   onDeleteTask={(id) => deleteTask.mutate(id)}
