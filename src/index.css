@@ -41,9 +41,9 @@
     --sidebar-muted: 245 58% 60%;
     --sidebar-accent: 245 58% 45%;
 
-    --kanban-todo: 245 58% 51%;
-    --kanban-progress: 35 92% 55%;
-    --kanban-completed: 152 60% 45%;
+    --kanban-todo: 0 90% 60%;
+    --kanban-progress: 45 96% 56%;
+    --kanban-completed: 152 71% 40%;
 
     --gradient-start: 245 58% 51%;
     --gradient-end: 200 80% 55%;
