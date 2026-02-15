@@ -129,8 +129,10 @@ serve(async (req) => {
 
     const authHeader = req.headers.get("Authorization") || "";
     const user = await getUser(authHeader);
+    console.log("User resolved:", user?.id || "no user");
 
-    const taskContext = user ? await fetchTaskContext() : "";
+    const taskContext = await fetchTaskContext();
+    console.log("Task context length:", taskContext.length);
 
     const systemPrompt = `You are TaskFlow AI, an intelligent task management assistant. You help users manage their kanban board tasks.
 
