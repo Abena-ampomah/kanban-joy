@@ -1,14 +1,14 @@
-import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import Auth from "./Auth";
 import AppSidebar from "@/components/AppSidebar";
 import KanbanBoard from "@/components/KanbanBoard";
 import AIChatbot from "@/components/AIChatbot";
 import NotesPanel from "@/components/NotesPanel";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { LayoutDashboard, StickyNote } from "lucide-react";
 
 export default function Index() {
   const { user, loading } = useAuth();
-  const [showNotes, setShowNotes] = useState(true);
 
   if (loading) {
     return (
@@ -23,8 +23,28 @@ export default function Index() {
   return (
     <div className="flex h-screen bg-background overflow-hidden">
       <AppSidebar />
-      <KanbanBoard />
-      {showNotes && <NotesPanel />}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <Tabs defaultValue="kanban" className="flex-1 flex flex-col overflow-hidden">
+          <div className="px-4 pt-2">
+            <TabsList>
+              <TabsTrigger value="kanban" className="gap-1.5">
+                <LayoutDashboard className="h-4 w-4" />
+                Kanban Board
+              </TabsTrigger>
+              <TabsTrigger value="notes" className="gap-1.5">
+                <StickyNote className="h-4 w-4" />
+                Notes
+              </TabsTrigger>
+            </TabsList>
+          </div>
+          <TabsContent value="kanban" className="flex-1 overflow-hidden mt-0">
+            <KanbanBoard />
+          </TabsContent>
+          <TabsContent value="notes" className="flex-1 overflow-hidden mt-0">
+            <NotesPanel />
+          </TabsContent>
+        </Tabs>
+      </div>
       <AIChatbot />
     </div>
   );

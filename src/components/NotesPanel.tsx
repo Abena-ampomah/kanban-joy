@@ -71,7 +71,7 @@ export default function NotesPanel() {
   if (selectedNote) {
     const linkedTask = tasks.find((t) => t.id === selectedNote.task_id);
     return (
-      <div className="w-[380px] border-l border-border bg-card flex flex-col h-full">
+      <div className="w-full bg-card flex flex-col h-full">
         <div className="px-4 py-3 border-b border-border flex items-center gap-2">
           <button onClick={() => { setSelectedNote(null); setShowTranscriber(false); }} className="text-muted-foreground hover:text-foreground">
             <ChevronLeft className="h-4 w-4" />
@@ -146,7 +146,7 @@ export default function NotesPanel() {
 
   // Notes list view
   return (
-    <div className="w-[380px] border-l border-border bg-card flex flex-col h-full">
+    <div className="w-full bg-card flex flex-col h-full">
       <div className="px-4 py-3 border-b border-border">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
