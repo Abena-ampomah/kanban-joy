@@ -1,6 +1,7 @@
 import { Draggable } from "@hello-pangea/dnd";
 import { Task, Priority } from "@/hooks/useTasks";
-import { MoreHorizontal, Trash2, Edit2 } from "lucide-react";
+import { MoreHorizontal, Trash2, Edit2, CalendarDays, AlertCircle } from "lucide-react";
+import { format, isPast, isToday } from "date-fns";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { motion } from "framer-motion";
@@ -75,6 +76,17 @@ export default function TaskCard({ task, index, onUpdate, onDelete, onEdit }: Ta
               </SelectContent>
             </Select>
           </div>
+
+          {task.due_date && (() => {
+            const dueDate = new Date(task.due_date + "T00:00:00");
+            const overdue = isPast(dueDate) && !isToday(dueDate) && task.status !== "completed";
+            return (
+              <div className={`flex items-center gap-1 mt-2 text-[11px] ${overdue ? "text-destructive font-semibold" : "text-muted-foreground"}`}>
+                {overdue ? <AlertCircle className="h-3 w-3" /> : <CalendarDays className="h-3 w-3" />}
+                <span>{overdue ? "Overdue: " : "Due: "}{format(dueDate, "MMM d, yyyy")}</span>
+              </div>
+            );
+          })()}
 
           <div className="flex items-center justify-between mt-3">
             <div className="flex items-center gap-1.5">

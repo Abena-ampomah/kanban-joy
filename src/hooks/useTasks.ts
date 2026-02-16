@@ -11,6 +11,8 @@ export interface Task {
   status: string;
   priority_id: string | null;
   assignee_id: string | null;
+  workspace_id: string | null;
+  due_date: string | null;
   created_by: string;
   created_at: string;
   updated_at: string;
@@ -72,7 +74,7 @@ export function useTasks() {
   });
 
   const createTask = useMutation({
-    mutationFn: async (task: { title: string; description?: string; status?: string; priority_id?: string; assignee_id?: string }) => {
+    mutationFn: async (task: { title: string; description?: string; status?: string; priority_id?: string; assignee_id?: string; due_date?: string; workspace_id?: string }) => {
       const { error } = await supabase.from("tasks").insert({ ...task, created_by: user!.id });
       if (error) throw error;
     },
@@ -84,7 +86,7 @@ export function useTasks() {
   });
 
   const updateTask = useMutation({
-    mutationFn: async ({ id, ...updates }: { id: string; title?: string; description?: string; status?: string; priority_id?: string | null; assignee_id?: string | null }) => {
+    mutationFn: async ({ id, ...updates }: { id: string; title?: string; description?: string; status?: string; priority_id?: string | null; assignee_id?: string | null; due_date?: string | null; workspace_id?: string | null }) => {
       const { error } = await supabase.from("tasks").update(updates).eq("id", id);
       if (error) throw error;
       if (updates.status === "completed") fireConfetti();
