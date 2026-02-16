@@ -5,13 +5,18 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { CalendarIcon } from "lucide-react";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 import { Priority } from "@/hooks/useTasks";
 import { Task } from "@/hooks/useTasks";
 
 interface AddTaskDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSubmit: (task: { title: string; description?: string; status?: string; priority_id?: string; assignee_id?: string }) => void;
+  onSubmit: (task: { title: string; description?: string; status?: string; priority_id?: string; assignee_id?: string; due_date?: string }) => void;
   onUpdate?: (id: string, updates: any) => void;
   priorities: Priority[];
   profiles: { id: string; display_name: string }[];
@@ -25,6 +30,7 @@ export default function AddTaskDialog({ open, onOpenChange, onSubmit, onUpdate, 
   const [status, setStatus] = useState(defaultStatus || "todo");
   const [priorityId, setPriorityId] = useState("");
   const [assigneeId, setAssigneeId] = useState("");
+  const [dueDate, setDueDate] = useState<Date | undefined>(undefined);
 
   useEffect(() => {
     if (editingTask) {
@@ -33,28 +39,33 @@ export default function AddTaskDialog({ open, onOpenChange, onSubmit, onUpdate, 
       setStatus(editingTask.status);
       setPriorityId(editingTask.priority_id || "");
       setAssigneeId(editingTask.assignee_id || "");
+      setDueDate(editingTask.due_date ? new Date(editingTask.due_date + "T00:00:00") : undefined);
     } else {
       setTitle("");
       setDescription("");
       setStatus(defaultStatus || "todo");
       setPriorityId("");
       setAssigneeId("");
+      setDueDate(undefined);
     }
   }, [editingTask, defaultStatus, open]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    const dueDateStr = dueDate ? format(dueDate, "yyyy-MM-dd") : null;
     if (editingTask && onUpdate) {
       onUpdate(editingTask.id, {
         title, description, status,
         priority_id: priorityId || null,
         assignee_id: assigneeId || null,
+        due_date: dueDateStr,
       });
     } else {
       onSubmit({
         title, description, status,
         priority_id: priorityId || undefined,
         assignee_id: assigneeId || undefined,
+        due_date: dueDateStr || undefined,
       });
     }
     onOpenChange(false);
@@ -104,16 +115,32 @@ export default function AddTaskDialog({ open, onOpenChange, onSubmit, onUpdate, 
               </Select>
             </div>
           </div>
-          <div>
-            <Label>Assignee</Label>
-            <Select value={assigneeId} onValueChange={setAssigneeId}>
-              <SelectTrigger className="mt-1"><SelectValue placeholder="Unassigned" /></SelectTrigger>
-              <SelectContent>
-                {profiles.map((p) => (
-                  <SelectItem key={p.id} value={p.id}>{p.display_name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label>Assignee</Label>
+              <Select value={assigneeId} onValueChange={setAssigneeId}>
+                <SelectTrigger className="mt-1"><SelectValue placeholder="Unassigned" /></SelectTrigger>
+                <SelectContent>
+                  {profiles.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>{p.display_name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Due Date</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className={cn("w-full mt-1 justify-start text-left font-normal", !dueDate && "text-muted-foreground")}>
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {dueDate ? format(dueDate, "MMM d, yyyy") : "Pick a date"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar mode="single" selected={dueDate} onSelect={setDueDate} initialFocus className={cn("p-3 pointer-events-auto")} />
+                </PopoverContent>
+              </Popover>
+            </div>
           </div>
           <Button type="submit" className="w-full">{editingTask ? "Update Task" : "Create Task"}</Button>
         </form>

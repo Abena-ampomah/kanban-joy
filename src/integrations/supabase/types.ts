@@ -106,33 +106,39 @@ export type Database = {
           created_at: string
           created_by: string
           description: string | null
+          due_date: string | null
           id: string
           priority_id: string | null
           status: string
           title: string
           updated_at: string
+          workspace_id: string | null
         }
         Insert: {
           assignee_id?: string | null
           created_at?: string
           created_by: string
           description?: string | null
+          due_date?: string | null
           id?: string
           priority_id?: string | null
           status?: string
           title: string
           updated_at?: string
+          workspace_id?: string | null
         }
         Update: {
           assignee_id?: string | null
           created_at?: string
           created_by?: string
           description?: string | null
+          due_date?: string | null
           id?: string
           priority_id?: string | null
           status?: string
           title?: string
           updated_at?: string
+          workspace_id?: string | null
         }
         Relationships: [
           {
@@ -140,6 +146,13 @@ export type Database = {
             columns: ["priority_id"]
             isOneToOne: false
             referencedRelation: "task_priorities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
             referencedColumns: ["id"]
           },
         ]
@@ -162,6 +175,94 @@ export type Database = {
         }
         Relationships: []
       }
+      workspace_invites: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          invited_by: string
+          status: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          invited_by: string
+          status?: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          invited_by?: string
+          status?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workspace_invites_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workspace_members: {
+        Row: {
+          id: string
+          joined_at: string
+          role: string
+          user_id: string
+          workspace_id: string
+        }
+        Insert: {
+          id?: string
+          joined_at?: string
+          role?: string
+          user_id: string
+          workspace_id: string
+        }
+        Update: {
+          id?: string
+          joined_at?: string
+          role?: string
+          user_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workspace_members_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workspaces: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          id?: string
+          name: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -172,6 +273,10 @@ export type Database = {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
         }
+        Returns: boolean
+      }
+      is_workspace_manager: {
+        Args: { _user_id: string; _workspace_id: string }
         Returns: boolean
       }
     }
