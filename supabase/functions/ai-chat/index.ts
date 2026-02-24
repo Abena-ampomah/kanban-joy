@@ -6,8 +6,8 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const AI_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
-const MODEL = "google/gemini-3-flash-preview";
+const AI_URL = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
+const MODEL = "gemini-1.5-flash";
 
 // Helper to create a user-scoped Supabase client
 function getUserClient(authHeader: string) {
@@ -139,8 +139,8 @@ serve(async (req: Request) => {
 
   try {
     const { messages } = await req.json();
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+    if (!GEMINI_API_KEY) throw new Error("GEMINI_API_KEY not configured");
 
     const authHeader = req.headers.get("Authorization") || "";
     const user = await getUser(authHeader);
@@ -166,7 +166,7 @@ Be concise, helpful, and friendly. Use markdown for formatting.`;
     const firstResponse = await fetch(AI_URL, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        Authorization: `Bearer ${GEMINI_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
@@ -191,7 +191,7 @@ Be concise, helpful, and friendly. Use markdown for formatting.`;
       const streamResponse = await fetch(AI_URL, {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          Authorization: `Bearer ${GEMINI_API_KEY}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
@@ -220,7 +220,7 @@ Be concise, helpful, and friendly. Use markdown for formatting.`;
     const streamResponse = await fetch(AI_URL, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        Authorization: `Bearer ${GEMINI_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
