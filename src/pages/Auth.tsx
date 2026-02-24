@@ -34,8 +34,9 @@ export default function Auth() {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
       }
-    } catch (error: any) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : "An unexpected error occurred";
+      toast({ title: "Error", description: msg, variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -87,9 +88,8 @@ export default function Auth() {
                     <button
                       type="button"
                       onClick={() => setRole("manager")}
-                      className={`flex items-center gap-2 p-3 rounded-lg border-2 transition-all ${
-                        role === "manager" ? "border-primary bg-accent" : "border-border hover:border-primary/40"
-                      }`}
+                      className={`flex items-center gap-2 p-3 rounded-lg border-2 transition-all ${role === "manager" ? "border-primary bg-accent" : "border-border hover:border-primary/40"
+                        }`}
                     >
                       <Users className="h-5 w-5 text-primary" />
                       <span className="font-medium text-sm">Manager</span>
@@ -97,9 +97,8 @@ export default function Auth() {
                     <button
                       type="button"
                       onClick={() => setRole("individual")}
-                      className={`flex items-center gap-2 p-3 rounded-lg border-2 transition-all ${
-                        role === "individual" ? "border-primary bg-accent" : "border-border hover:border-primary/40"
-                      }`}
+                      className={`flex items-center gap-2 p-3 rounded-lg border-2 transition-all ${role === "individual" ? "border-primary bg-accent" : "border-border hover:border-primary/40"
+                        }`}
                     >
                       <User className="h-5 w-5 text-primary" />
                       <span className="font-medium text-sm">Individual</span>

@@ -96,11 +96,18 @@
   * {
     @apply border-border;
   }
+
   body {
     @apply bg-background text-foreground;
     font-family: 'Inter', sans-serif;
   }
-  h1, h2, h3, h4, h5, h6 {
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
     font-family: 'Space Grotesk', sans-serif;
   }
 }
@@ -109,22 +116,37 @@
   .gradient-sidebar {
     background: linear-gradient(180deg, hsl(245, 58%, 55%) 0%, hsl(245, 58%, 42%) 100%);
   }
+
   .gradient-header {
     background: linear-gradient(135deg, hsl(245, 58%, 55%) 0%, hsl(200, 80%, 55%) 100%);
   }
+
   .glass-card {
     background: rgba(255, 255, 255, 0.85);
+    -webkit-backdrop-filter: blur(12px);
     backdrop-filter: blur(12px);
     border: 1px solid rgba(255, 255, 255, 0.4);
   }
+
   .kanban-shadow {
     box-shadow: 0 4px 20px -4px hsla(245, 58%, 51%, 0.12);
   }
+
   .task-card-hover {
     transition: all 0.2s ease;
   }
+
   .task-card-hover:hover {
     transform: translateY(-2px);
     box-shadow: 0 8px 30px -8px hsla(245, 58%, 51%, 0.2);
+  }
+
+  .priority-badge {
+    background-color: var(--priority-color-bg, rgba(0, 0, 0, 0.08));
+    color: var(--priority-color);
+  }
+
+  .priority-dot {
+    background-color: var(--priority-color);
   }
 }

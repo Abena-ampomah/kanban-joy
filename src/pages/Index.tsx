@@ -7,11 +7,14 @@ import AIChatbot from "@/components/AIChatbot";
 import NotesPanel from "@/components/NotesPanel";
 import WorkspaceManager from "@/components/WorkspaceManager";
 import WorkspaceInvites from "@/components/WorkspaceInvites";
+import ArchivePanel from "@/components/ArchivePanel";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LayoutDashboard, StickyNote } from "lucide-react";
+import { useTasks } from "@/hooks/useTasks";
 
 export default function Index() {
   const { user, loading, role } = useAuth();
+  const { archivedTasks, restoreTask, deleteTask, isLoading: tasksLoading } = useTasks();
   const [activeTab, setActiveTab] = useState("kanban");
 
   if (loading) {
@@ -30,6 +33,16 @@ export default function Index() {
     }
     if (activeTab === "invites" && role !== "manager") {
       return <WorkspaceInvites />;
+    }
+    if (activeTab === "archive") {
+      return (
+        <ArchivePanel
+          tasks={archivedTasks}
+          onRestore={(id) => restoreTask.mutate(id)}
+          onDelete={(id) => deleteTask.mutate(id)}
+          isLoading={tasksLoading}
+        />
+      );
     }
     return (
       <Tabs defaultValue="kanban" className="flex-1 flex flex-col overflow-hidden">

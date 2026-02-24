@@ -18,6 +18,15 @@ export default function MeetingTranscriber({ onTranscript, isActive, onToggle }:
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
 
+  // Defined first so it can be listed as a dependency of startRecording
+  const stopRecording = useCallback(() => {
+    mediaRecorderRef.current?.stop();
+    wsRef.current?.close();
+    streamRef.current?.getTracks().forEach((t) => t.stop());
+    setRecording(false);
+    setConnecting(false);
+  }, []);
+
   const startRecording = useCallback(async () => {
     setConnecting(true);
     try {
@@ -69,7 +78,9 @@ export default function MeetingTranscriber({ onTranscript, isActive, onToggle }:
           if (data.type === "committed_transcript" && data.text?.trim()) {
             onTranscript(data.text + " ");
           }
-        } catch {}
+        } catch {
+          // Ignore malformed JSON frames from the WebSocket stream
+        }
       };
 
       ws.onerror = () => {
@@ -80,19 +91,12 @@ export default function MeetingTranscriber({ onTranscript, isActive, onToggle }:
       ws.onclose = () => {
         setRecording(false);
       };
-    } catch (e: any) {
-      toast({ title: "Could not start recording", description: e.message, variant: "destructive" });
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "An unexpected error occurred";
+      toast({ title: "Could not start recording", description: msg, variant: "destructive" });
       setConnecting(false);
     }
-  }, [onTranscript, toast]);
-
-  const stopRecording = useCallback(() => {
-    mediaRecorderRef.current?.stop();
-    wsRef.current?.close();
-    streamRef.current?.getTracks().forEach((t) => t.stop());
-    setRecording(false);
-    setConnecting(false);
-  }, []);
+  }, [onTranscript, toast, stopRecording]);
 
   return (
     <div className="flex items-center gap-2">

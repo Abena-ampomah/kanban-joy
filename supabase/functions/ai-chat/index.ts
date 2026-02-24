@@ -9,29 +9,32 @@ const corsHeaders = {
 const AI_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
 const MODEL = "google/gemini-3-flash-preview";
 
-async function getUser(authHeader: string) {
+// Helper to create a user-scoped Supabase client
+function getUserClient(authHeader: string) {
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
   const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
-  const token = authHeader.replace("Bearer ", "");
-  const client = createClient(supabaseUrl, anonKey, {
-    global: { headers: { Authorization: `Bearer ${token}` } },
+  return createClient(supabaseUrl, anonKey, {
+    global: { headers: { Authorization: authHeader } },
   });
+}
+
+async function getUser(authHeader: string) {
+  const client = getUserClient(authHeader);
   const { data: { user } } = await client.auth.getUser();
   return user;
 }
 
-async function fetchTaskContext() {
-  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-  const supabase = createClient(supabaseUrl, serviceKey);
+// Fetch tasks using the USER'S permissions (RLS)
+async function fetchTaskContext(authHeader: string) {
+  const supabase = getUserClient(authHeader);
   const { data: tasks } = await supabase
     .from("tasks")
     .select("id, title, description, status, priority:task_priorities(name)")
     .order("created_at", { ascending: false })
-    .limit(50);
+    .limit(50); // Context window limit
 
   if (!tasks?.length) return "";
-  return "\n\nCurrent tasks:\n" + tasks.map((t: any) =>
+  return "\n\nCurrent tasks (visible to you):\n" + tasks.map((t: { id: string, title: string, status: string, priority?: { name?: string } }) =>
     `- [${t.id}] "${t.title}" (status: ${t.status}, priority: ${t.priority?.name || "none"})`
   ).join("\n");
 }
@@ -74,10 +77,9 @@ const tools = [
   },
 ];
 
-async function executeToolCalls(toolCalls: any[], userId: string) {
-  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-  const supabase = createClient(supabaseUrl, serviceKey);
+
+async function executeToolCalls(toolCalls: { function: { name: string, arguments: string } }[], authHeader: string) {
+  const supabase = getUserClient(authHeader);
   const results: string[] = [];
 
   for (const tc of toolCalls) {
@@ -91,6 +93,7 @@ async function executeToolCalls(toolCalls: any[], userId: string) {
 
       const { error } = await supabase.from("tasks").update(updates).eq("id", args.task_id);
       if (error) {
+        // This will now catch RLS errors if the user tries to update a task they don't own/manage
         results.push(`❌ Failed to update task: ${error.message}`);
       } else {
         if (args.status) results.push(`✅ Task moved to **${args.status.replace("_", " ")}**!`);
@@ -101,11 +104,17 @@ async function executeToolCalls(toolCalls: any[], userId: string) {
     }
 
     if (tc.function.name === "create_task") {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        results.push("❌ Error: Could not identify user.");
+        continue;
+      }
+
       const { error } = await supabase.from("tasks").insert({
         title: args.title,
         description: args.description || "",
         status: args.status || "todo",
-        created_by: userId,
+        created_by: user.id,
       });
       if (error) {
         results.push(`❌ Failed to create task: ${error.message}`);
@@ -119,7 +128,7 @@ async function executeToolCalls(toolCalls: any[], userId: string) {
   return results.join("\n");
 }
 
-serve(async (req) => {
+serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
@@ -131,7 +140,7 @@ serve(async (req) => {
     const user = await getUser(authHeader);
     console.log("User resolved:", user?.id || "no user");
 
-    const taskContext = await fetchTaskContext();
+    const taskContext = await fetchTaskContext(authHeader);
     console.log("Task context length:", taskContext.length);
 
     const systemPrompt = `You are TaskFlow AI, an intelligent task management assistant. You help users manage their kanban board tasks.
@@ -192,10 +201,10 @@ Be concise, helpful, and friendly. Use markdown for formatting.`;
     }
 
     // Execute tool calls
-    const toolResults = await executeToolCalls(choice.message.tool_calls, user?.id || "");
+    const toolResults = await executeToolCalls(choice.message.tool_calls, authHeader);
 
     // Build tool call result messages for the follow-up
-    const toolMessages = choice.message.tool_calls.map((tc: any) => ({
+    const toolMessages = choice.message.tool_calls.map((tc: { id: string }) => ({
       role: "tool",
       tool_call_id: tc.id,
       content: toolResults,

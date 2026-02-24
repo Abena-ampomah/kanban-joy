@@ -19,7 +19,7 @@ const AuthContext = createContext<AuthContextType>({
   loading: true,
   role: null,
   displayName: "",
-  signOut: async () => {},
+  signOut: async () => { },
 });
 
 export const useAuth = () => useContext(AuthContext);
@@ -32,37 +32,75 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [displayName, setDisplayName] = useState("");
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (!session?.user) {
-        setRole(null);
-        setDisplayName("");
-        setLoading(false);
+    let mounted = true;
+
+    // Get initial session
+    const initSession = async () => {
+      try {
+        const { data: { session: initialSession } } = await supabase.auth.getSession();
+        if (mounted) {
+          setSession(initialSession);
+          setUser(initialSession?.user ?? null);
+          if (!initialSession?.user) {
+            setLoading(false);
+          }
+        }
+      } catch (error) {
+        console.error("Error checking auth session:", error);
+        if (mounted) setLoading(false);
+      }
+    };
+
+    initSession();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, newSession) => {
+      if (mounted) {
+        setSession(newSession);
+        setUser(newSession?.user ?? null);
+        if (!newSession?.user) {
+          setRole(null);
+          setDisplayName("");
+          setLoading(false);
+        }
       }
     });
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (!session?.user) setLoading(false);
-    });
-
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   useEffect(() => {
-    if (!user) return;
+    let mounted = true;
+
     const fetchUserData = async () => {
-      const [{ data: roleData }, { data: profileData }] = await Promise.all([
-        supabase.from("user_roles").select("role").eq("user_id", user.id).single(),
-        supabase.from("profiles").select("display_name").eq("id", user.id).single(),
-      ]);
-      if (roleData) setRole(roleData.role);
-      if (profileData) setDisplayName(profileData.display_name);
-      setLoading(false);
+      if (!user) return;
+
+      try {
+        const [{ data: roleData }, { data: profileData }] = await Promise.all([
+          supabase.from("user_roles").select("role").eq("user_id", user.id).single(),
+          supabase.from("profiles").select("display_name").eq("id", user.id).single(),
+        ]);
+
+        if (mounted) {
+          if (roleData) setRole(roleData.role);
+          if (profileData) setDisplayName(profileData.display_name);
+        }
+      } catch (error) {
+        console.error("Error fetching user data:", error);
+      } finally {
+        if (mounted) {
+          setLoading(false);
+        }
+      }
     };
+
     fetchUserData();
+
+    return () => {
+      mounted = false;
+    };
   }, [user]);
 
   const signOut = async () => {

@@ -13,10 +13,23 @@ export interface Task {
   assignee_id: string | null;
   workspace_id: string | null;
   due_date: string | null;
+  is_archived: boolean;
+  archived_at: string | null;
   created_by: string;
   created_at: string;
   updated_at: string;
   priority?: { id: string; name: string; color: string } | null;
+}
+
+export interface TaskUpdate {
+  title?: string;
+  description?: string;
+  status?: string;
+  priority_id?: string | null;
+  assignee_id?: string | null;
+  due_date?: string | null;
+  workspace_id?: string | null;
+  is_archived?: boolean;
 }
 
 export interface Priority {
@@ -41,12 +54,28 @@ export function useTasks() {
   const { toast } = useToast();
 
   const tasksQuery = useQuery({
-    queryKey: ["tasks"],
+    queryKey: ["tasks", { archived: false }],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("tasks")
         .select("*, priority:task_priorities(*)")
-        .order("created_at", { ascending: false });
+        .eq("is_archived", false)
+        .order("created_at", { ascending: false })
+        .limit(100);
+      if (error) throw error;
+      return (data ?? []) as unknown as Task[];
+    },
+    enabled: !!user,
+  });
+
+  const archivedTasksQuery = useQuery({
+    queryKey: ["tasks", { archived: true }],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("tasks")
+        .select("*, priority:task_priorities(*)")
+        .eq("is_archived", true)
+        .order("archived_at", { ascending: false });
       if (error) throw error;
       return (data ?? []) as unknown as Task[];
     },
@@ -82,17 +111,26 @@ export function useTasks() {
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
       toast({ title: "Task created!" });
     },
-    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+    onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
   const updateTask = useMutation({
-    mutationFn: async ({ id, ...updates }: { id: string; title?: string; description?: string; status?: string; priority_id?: string | null; assignee_id?: string | null; due_date?: string | null; workspace_id?: string | null }) => {
-      const { error } = await supabase.from("tasks").update(updates).eq("id", id);
+    mutationFn: async ({ id, ...updates }: { id: string; title?: string; description?: string; status?: string; priority_id?: string | null; assignee_id?: string | null; due_date?: string | null; workspace_id?: string | null; is_archived?: boolean }) => {
+      const actualUpdates: Record<string, unknown> = { ...updates };
+      if (updates.is_archived === true) {
+        actualUpdates.archived_at = new Date().toISOString();
+      } else if (updates.is_archived === false) {
+        actualUpdates.archived_at = null;
+      }
+
+      const { error } = await supabase.from("tasks").update(actualUpdates).eq("id", id);
       if (error) throw error;
       if (updates.status === "completed") fireConfetti();
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["tasks"] }),
-    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tasks"] });
+    },
+    onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
   const deleteTask = useMutation({
@@ -102,18 +140,52 @@ export function useTasks() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
-      toast({ title: "Task deleted" });
+      toast({ title: "Task permanently deleted" });
     },
-    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+    onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
+  const archiveTask = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from("tasks")
+        .update({ is_archived: true, archived_at: new Date().toISOString() })
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      toast({ title: "Task archived", description: "This task will be permanently deleted in 6 months." });
+    },
+    onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
+  const restoreTask = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from("tasks")
+        .update({ is_archived: false, archived_at: null })
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      toast({ title: "Task restored" });
+    },
+    onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
   return {
     tasks: tasksQuery.data ?? [],
+    archivedTasks: archivedTasksQuery.data ?? [],
     priorities: prioritiesQuery.data ?? [],
     profiles: profilesQuery.data ?? [],
-    isLoading: tasksQuery.isLoading,
+    isLoading: tasksQuery.isLoading || archivedTasksQuery.isLoading,
     createTask,
     updateTask,
     deleteTask,
+    archiveTask,
+    restoreTask,
   };
 }
+

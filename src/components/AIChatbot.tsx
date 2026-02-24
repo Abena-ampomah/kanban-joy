@@ -60,32 +60,43 @@ export default function AIChatbot() {
       const decoder = new TextDecoder();
       let buf = "";
 
+      // Function to process a chunk of text
+      const processLine = (line: string) => {
+        if (line.endsWith("\r")) line = line.slice(0, -1);
+        if (!line.startsWith("data: ") || line.trim() === "" || line.startsWith(":")) return false;
+        const jsonStr = line.slice(6).trim();
+        if (jsonStr === "[DONE]") return true;
+        try {
+          const parsed = JSON.parse(jsonStr);
+          const content = parsed.choices?.[0]?.delta?.content;
+          if (content) {
+            assistantSoFar += content;
+            setMessages((prev) => {
+              const last = prev[prev.length - 1];
+              if (last?.role === "assistant") {
+                return prev.map((m, i) => (i === prev.length - 1 ? { ...m, content: assistantSoFar } : m));
+              }
+              return [...prev, { role: "assistant", content: assistantSoFar }];
+            });
+          }
+        } catch {
+          // ignore invalid json from stream
+        }
+        return false;
+      };
+
       while (true) {
         const { done, value } = await reader.read();
-        if (done) break;
+        if (done) {
+          if (buf.length > 0) processLine(buf);
+          break;
+        }
         buf += decoder.decode(value, { stream: true });
         let nl: number;
         while ((nl = buf.indexOf("\n")) !== -1) {
-          let line = buf.slice(0, nl);
+          const line = buf.slice(0, nl);
           buf = buf.slice(nl + 1);
-          if (line.endsWith("\r")) line = line.slice(0, -1);
-          if (!line.startsWith("data: ") || line.trim() === "" || line.startsWith(":")) continue;
-          const jsonStr = line.slice(6).trim();
-          if (jsonStr === "[DONE]") break;
-          try {
-            const parsed = JSON.parse(jsonStr);
-            const content = parsed.choices?.[0]?.delta?.content;
-            if (content) {
-              assistantSoFar += content;
-              setMessages((prev) => {
-                const last = prev[prev.length - 1];
-                if (last?.role === "assistant") {
-                  return prev.map((m, i) => (i === prev.length - 1 ? { ...m, content: assistantSoFar } : m));
-                }
-                return [...prev, { role: "assistant", content: assistantSoFar }];
-              });
-            }
-          } catch {}
+          if (processLine(line)) break;
         }
       }
 
@@ -94,6 +105,7 @@ export default function AIChatbot() {
         queryClient.invalidateQueries({ queryKey: ["tasks"] });
       }
     } catch (e) {
+      console.error(e);
       toast({ title: "AI Error", description: "Could not reach AI assistant.", variant: "destructive" });
     } finally {
       setLoading(false);
@@ -115,7 +127,7 @@ export default function AIChatbot() {
                 <Bot className="h-5 w-5 text-primary-foreground" />
                 <span className="font-display font-semibold text-primary-foreground text-sm">AI Task Assistant</span>
               </div>
-              <button onClick={() => setOpen(false)} className="text-primary-foreground/70 hover:text-primary-foreground">
+              <button onClick={() => setOpen(false)} className="text-primary-foreground/70 hover:text-primary-foreground" aria-label="Close chat">
                 <X className="h-4 w-4" />
               </button>
             </div>
@@ -130,9 +142,8 @@ export default function AIChatbot() {
               )}
               {messages.map((m, i) => (
                 <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
-                  <div className={`max-w-[85%] rounded-xl px-3 py-2 text-sm ${
-                    m.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted text-foreground"
-                  }`}>
+                  <div className={`max-w-[85%] rounded-xl px-3 py-2 text-sm ${m.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted text-foreground"
+                    }`}>
                     {m.role === "assistant" ? (
                       <div className="prose prose-sm max-w-none [&_p]:m-0">
                         <ReactMarkdown>{m.content}</ReactMarkdown>

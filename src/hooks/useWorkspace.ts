@@ -96,7 +96,7 @@ export function useWorkspace() {
       queryClient.invalidateQueries({ queryKey: ["workspace-members"] });
       toast({ title: "Workspace created!" });
     },
-    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+    onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
   const sendInvite = useMutation({
@@ -110,7 +110,7 @@ export function useWorkspace() {
       queryClient.invalidateQueries({ queryKey: ["workspace-invites"] });
       toast({ title: "Invite sent!" });
     },
-    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+    onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
   const respondInvite = useMutation({
@@ -133,7 +133,7 @@ export function useWorkspace() {
       queryClient.invalidateQueries({ queryKey: ["workspace-members"] });
       toast({ title: "Invite updated!" });
     },
-    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+    onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
   const removeMember = useMutation({
@@ -145,7 +145,7 @@ export function useWorkspace() {
       queryClient.invalidateQueries({ queryKey: ["workspace-members"] });
       toast({ title: "Member removed" });
     },
-    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+    onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
   const activeWorkspace = workspacesQuery.data?.[0] ?? null;

@@ -1,5 +1,5 @@
 import { Droppable } from "@hello-pangea/dnd";
-import { Task } from "@/hooks/useTasks";
+import { Task, TaskUpdate } from "@/hooks/useTasks";
 import TaskCard from "./TaskCard";
 import { Plus } from "lucide-react";
 
@@ -10,7 +10,7 @@ interface KanbanColumnProps {
   colorClass: string;
   bgClass: string;
   onAddTask: (status: string) => void;
-  onUpdateTask: (id: string, updates: any) => void;
+  onUpdateTask: (id: string, updates: TaskUpdate) => void;
   onDeleteTask: (id: string) => void;
   onEditTask: (task: Task) => void;
 }
@@ -28,6 +28,7 @@ export default function KanbanColumn({ id, title, tasks, colorClass, bgClass, on
         <button
           onClick={() => onAddTask(id)}
           className="p-1 rounded-md hover:bg-white/50 transition-colors"
+          aria-label={`Add task to ${title}`}
         >
           <Plus className="h-4 w-4 text-muted-foreground" />
         </button>
@@ -38,9 +39,8 @@ export default function KanbanColumn({ id, title, tasks, colorClass, bgClass, on
           <div
             ref={provided.innerRef}
             {...provided.droppableProps}
-            className={`flex-1 space-y-3 p-2 rounded-xl transition-colors min-h-[200px] ${
-              snapshot.isDraggingOver ? "bg-white/40" : ""
-            }`}
+            className={`flex-1 space-y-3 p-2 rounded-xl transition-colors min-h-[200px] ${snapshot.isDraggingOver ? "bg-white/40" : ""
+              }`}
           >
             {tasks.map((task, index) => (
               <TaskCard

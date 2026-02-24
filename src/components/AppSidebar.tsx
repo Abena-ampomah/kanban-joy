@@ -1,4 +1,4 @@
-import { LayoutDashboard, LogOut, User, Shield, Building2, Users, Mail } from "lucide-react";
+import { LayoutDashboard, LogOut, User, Shield, Building2, Users, Mail, Archive } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWorkspace } from "@/hooks/useWorkspace";
 
@@ -13,6 +13,7 @@ export default function AppSidebar({ activeTab, onTabChange }: AppSidebarProps) 
 
   const navItems = [
     { id: "kanban", label: "Kanban Board", icon: LayoutDashboard },
+    { id: "archive", label: "Archive", icon: Archive },
     ...(role === "manager"
       ? [{ id: "workspace", label: "Workspace", icon: Building2 }]
       : [{ id: "invites", label: `Invites${pendingInvites.length > 0 ? ` (${pendingInvites.length})` : ""}`, icon: Mail }]
@@ -36,9 +37,8 @@ export default function AppSidebar({ activeTab, onTabChange }: AppSidebarProps) 
           <button
             key={item.id}
             onClick={() => onTabChange(item.id)}
-            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
-              activeTab === item.id ? "bg-sidebar-accent/30" : "hover:bg-sidebar-accent/20"
-            }`}
+            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${activeTab === item.id ? "bg-sidebar-accent/30" : "hover:bg-sidebar-accent/20"
+              }`}
           >
             <item.icon className="h-4 w-4" />
             <span className="text-sm font-medium">{item.label}</span>
@@ -58,7 +58,7 @@ export default function AppSidebar({ activeTab, onTabChange }: AppSidebarProps) 
               <span className="capitalize">{role}</span>
             </div>
           </div>
-          <button onClick={signOut} className="p-1.5 rounded-md hover:bg-sidebar-accent/30 transition-colors">
+          <button onClick={signOut} className="p-1.5 rounded-md hover:bg-sidebar-accent/30 transition-colors" title="Logout">
             <LogOut className="h-4 w-4" />
           </button>
         </div>

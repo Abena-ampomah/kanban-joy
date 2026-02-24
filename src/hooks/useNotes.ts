@@ -45,7 +45,7 @@ export function useNotes() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["notes"] });
     },
-    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+    onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
   const updateNote = useMutation({
@@ -54,7 +54,7 @@ export function useNotes() {
       if (error) throw error;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["notes"] }),
-    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+    onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
   const deleteNote = useMutation({
@@ -66,7 +66,7 @@ export function useNotes() {
       queryClient.invalidateQueries({ queryKey: ["notes"] });
       toast({ title: "Note deleted" });
     },
-    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+    onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
   return {

@@ -10,14 +10,13 @@ import { Calendar } from "@/components/ui/calendar";
 import { CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
-import { Priority } from "@/hooks/useTasks";
-import { Task } from "@/hooks/useTasks";
+import { Priority, Task, TaskUpdate } from "@/hooks/useTasks";
 
 interface AddTaskDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSubmit: (task: { title: string; description?: string; status?: string; priority_id?: string; assignee_id?: string; due_date?: string }) => void;
-  onUpdate?: (id: string, updates: any) => void;
+  onUpdate?: (id: string, updates: TaskUpdate) => void;
   priorities: Priority[];
   profiles: { id: string; display_name: string }[];
   defaultStatus?: string;
@@ -106,7 +105,12 @@ export default function AddTaskDialog({ open, onOpenChange, onSubmit, onUpdate, 
                   {priorities.map((p) => (
                     <SelectItem key={p.id} value={p.id}>
                       <div className="flex items-center gap-2">
-                        <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: p.color }} />
+                        <span
+                          className="h-2.5 w-2.5 rounded-full priority-dot"
+                          ref={(el) => {
+                            if (el) el.style.setProperty("--priority-color", p.color);
+                          }}
+                        />
                         {p.name}
                       </div>
                     </SelectItem>

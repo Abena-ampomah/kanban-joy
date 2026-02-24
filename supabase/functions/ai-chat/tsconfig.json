@@ -1,0 +1,16 @@
+{
+  "compilerOptions": {
+    "module": "NodeNext",
+    "target": "ESNext",
+    "types": ["undici-types"],
+    "lib": ["esnext", "dom"],
+    "allowJs": true,
+    "moduleResolution": "NodeNext",
+    "baseUrl": ".",
+    "paths": {
+      "https://deno.land/std@0.168.0/http/server.ts": ["../../../node_modules/@supabase/functions-js/dist/server.d.ts"],
+      "https://esm.sh/@supabase/supabase-js@2": ["../../../node_modules/@supabase/supabase-js/dist/module/index.d.ts"]
+    }
+  },
+  "include": ["**/*.ts"]
+}
