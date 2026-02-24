@@ -27,11 +27,17 @@ async function getUser(authHeader: string) {
 // Fetch tasks using the USER'S permissions (RLS)
 async function fetchTaskContext(authHeader: string) {
   const supabase = getUserClient(authHeader);
-  const { data: tasks } = await supabase
+  const { data: tasks, error } = await supabase
     .from("tasks")
     .select("id, title, description, status, priority:task_priorities(name)")
+    .eq("is_archived", false)
     .order("created_at", { ascending: false })
     .limit(50); // Context window limit
+
+  if (error) {
+    console.error("Error fetching task context:", error);
+    return "";
+  }
 
   if (!tasks?.length) return "";
   return "\n\nCurrent tasks (visible to you):\n" + tasks.map((t: { id: string, title: string, status: string, priority?: { name?: string } }) =>

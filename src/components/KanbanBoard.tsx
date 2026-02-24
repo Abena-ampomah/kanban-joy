@@ -14,7 +14,7 @@ const COLUMNS = [
 ];
 
 export default function KanbanBoard() {
-  const { tasks, priorities, profiles, isLoading, createTask, updateTask, deleteTask } = useTasks();
+  const { tasks, priorities, profiles, isLoading, createTask, updateTask, archiveTask } = useTasks();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [defaultStatus, setDefaultStatus] = useState("todo");
   const [editingTask, setEditingTask] = useState<Task | null>(null);
@@ -84,7 +84,7 @@ export default function KanbanBoard() {
                   bgClass={col.bgClass}
                   onAddTask={handleAddTask}
                   onUpdateTask={(id, updates) => updateTask.mutate({ id, ...updates })}
-                  onDeleteTask={(id) => deleteTask.mutate(id)}
+                  onDeleteTask={(id) => archiveTask.mutate(id)}
                   onEditTask={handleEditTask}
                 />
               ))}
