@@ -39,11 +39,13 @@ export default function NotesPanel() {
     }
     setSummarizing(true);
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
       const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/summarize-notes`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({ text: selectedNote.content }),
       });
@@ -122,8 +124,6 @@ export default function NotesPanel() {
           <div className="px-4 py-2 border-b border-border">
             <MeetingTranscriber
               onTranscript={handleTranscriptAppend}
-              isActive={showTranscriber}
-              onToggle={() => setShowTranscriber(!showTranscriber)}
             />
           </div>
         )}

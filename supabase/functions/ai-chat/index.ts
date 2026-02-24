@@ -7,7 +7,7 @@ const corsHeaders = {
 };
 
 const AI_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
-const MODEL = "google/gemini-3-flash-preview";
+const MODEL = "google/gemini-2.0-flash";
 
 // Helper to create a user-scoped Supabase client
 function getUserClient(authHeader: string) {

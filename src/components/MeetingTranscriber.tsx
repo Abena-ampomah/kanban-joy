@@ -2,14 +2,13 @@ import { useState, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Mic, MicOff, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Props {
   onTranscript: (text: string) => void;
-  isActive: boolean;
-  onToggle: () => void;
 }
 
-export default function MeetingTranscriber({ onTranscript, isActive: _isActive, onToggle: _onToggle }: Props) {
+export default function MeetingTranscriber({ onTranscript }: Props) {
   const [recording, setRecording] = useState(false);
   const [connecting, setConnecting] = useState(false);
   const { toast } = useToast();
@@ -36,19 +35,21 @@ export default function MeetingTranscriber({ onTranscript, isActive: _isActive, 
       streamRef.current = stream;
 
       // Get scribe token
+      const { data: { session } } = await supabase.auth.getSession();
+      const sessionToken = session?.access_token || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
       const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/elevenlabs-scribe-token`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          Authorization: `Bearer ${sessionToken}`,
         },
       });
       if (!resp.ok) throw new Error("Failed to get token");
-      const { token } = await resp.json();
+      const { token: scribeToken } = await resp.json();
 
       // Connect WebSocket
       const ws = new WebSocket(
-        `wss://api.elevenlabs.io/v1/speech-to-text/websocket?model_id=scribe_v2_realtime&language_code=en&token=${token}`
+        `wss://api.elevenlabs.io/v1/speech-to-text/websocket?model_id=scribe_v2_realtime&language_code=en&token=${scribeToken}`
       );
       wsRef.current = ws;
 

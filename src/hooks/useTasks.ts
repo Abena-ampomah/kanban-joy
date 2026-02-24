@@ -141,10 +141,11 @@ export function useTasks(workspaceId?: string | "all") {
 
   const createTask = useMutation({
     mutationFn: async (task: { title: string; description?: string; status?: string; priority_id?: string; assignee_id?: string; due_date?: string; workspace_id?: string }) => {
+      const targetWorkspaceId = task.workspace_id || (workspaceId !== "all" ? workspaceId : null);
       const payload = {
         ...task,
         created_by: user!.id,
-        workspace_id: task.workspace_id || workspaceId || null
+        workspace_id: targetWorkspaceId || null
       };
       const { error } = await supabase.from("tasks").insert(payload);
       if (error) throw error;
