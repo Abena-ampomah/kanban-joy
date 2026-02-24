@@ -14,8 +14,10 @@ import { useTasks } from "@/hooks/useTasks";
 
 export default function Index() {
   const { user, loading, role } = useAuth();
-  const { archivedTasks, restoreTask, deleteTask, isLoading: tasksLoading } = useTasks();
   const [activeTab, setActiveTab] = useState("kanban");
+  const [selectedWorkspaceId, setSelectedWorkspaceId] = useState<string | null>(null);
+
+  const { tasks, archivedTasks, restoreTask, deleteTask, isLoading: tasksLoading } = useTasks(selectedWorkspaceId);
 
   if (loading) {
     return (
@@ -29,10 +31,17 @@ export default function Index() {
 
   const renderContent = () => {
     if (activeTab === "workspace" && role === "manager") {
-      return <WorkspaceManager />;
+      return <WorkspaceManager selectedWorkspaceId={selectedWorkspaceId} />;
     }
     if (activeTab === "invites" && role !== "manager") {
-      return <WorkspaceInvites />;
+      return (
+        <WorkspaceInvites
+          onAccept={(id) => {
+            setSelectedWorkspaceId(id);
+            setActiveTab("kanban");
+          }}
+        />
+      );
     }
     if (activeTab === "archive") {
       return (
@@ -59,7 +68,7 @@ export default function Index() {
           </TabsList>
         </div>
         <TabsContent value="kanban" className="flex-1 overflow-hidden mt-0">
-          <KanbanBoard />
+          <KanbanBoard workspaceId={selectedWorkspaceId} />
         </TabsContent>
         <TabsContent value="notes" className="flex-1 overflow-hidden mt-0">
           <NotesPanel />
@@ -70,11 +79,16 @@ export default function Index() {
 
   return (
     <div className="flex h-screen bg-background overflow-hidden">
-      <AppSidebar activeTab={activeTab} onTabChange={setActiveTab} />
+      <AppSidebar
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        selectedWorkspaceId={selectedWorkspaceId}
+        onWorkspaceChange={setSelectedWorkspaceId}
+      />
       <div className="flex-1 flex flex-col overflow-hidden">
         {renderContent()}
       </div>
-      <AIChatbot />
+      <AIChatbot workspaceId={selectedWorkspaceId} />
     </div>
   );
 }

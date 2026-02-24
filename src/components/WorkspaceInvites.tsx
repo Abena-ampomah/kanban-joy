@@ -3,7 +3,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Check, X, Mail } from "lucide-react";
 
-export default function WorkspaceInvites() {
+interface WorkspaceInvitesProps {
+  onAccept: (workspaceId: string) => void;
+}
+
+export default function WorkspaceInvites({ onAccept }: WorkspaceInvitesProps) {
   const { pendingInvites, respondInvite, workspaces } = useWorkspace();
 
   if (pendingInvites.length === 0 && workspaces.length > 0) {
@@ -52,7 +56,10 @@ export default function WorkspaceInvites() {
                 </Button>
                 <Button
                   size="sm"
-                  onClick={() => respondInvite.mutate({ inviteId: inv.id, accept: true, workspaceId: inv.workspace_id })}
+                  onClick={() => respondInvite.mutate(
+                    { inviteId: inv.id, accept: true, workspaceId: inv.workspace_id },
+                    { onSuccess: () => onAccept(inv.workspace_id) }
+                  )}
                   className="gap-1"
                 >
                   <Check className="h-3.5 w-3.5" /> Accept

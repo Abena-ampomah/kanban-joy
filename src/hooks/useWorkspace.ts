@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -34,33 +35,63 @@ export function useWorkspace() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
+  useEffect(() => {
+    if (!user) return;
+
+    // Subscribe to workspace changes (invites, members)
+    const channel = supabase
+      .channel("workspace_changes")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "workspace_members" },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["workspace-members"] });
+          queryClient.invalidateQueries({ queryKey: ["workspaces"] });
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "workspace_invites" },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["workspace-invites"] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user, queryClient]);
+
   const workspacesQuery = useQuery({
     queryKey: ["workspaces"],
     queryFn: async () => {
+      // Fetch workspaces where user is a member
       const { data, error } = await supabase
-        .from("workspaces")
-        .select("*")
-        .order("created_at", { ascending: false });
+        .from("workspace_members")
+        .select(`
+          role,
+          workspace:workspaces(*)
+        `)
+        .eq("user_id", user!.id);
+
       if (error) throw error;
-      return (data ?? []) as Workspace[];
+      return (data ?? []).map(d => ({
+        ...d.workspace as unknown as Workspace,
+        userRole: d.role
+      }));
     },
     enabled: !!user,
   });
 
-  const membersQuery = useQuery({
-    queryKey: ["workspace-members", workspacesQuery.data?.[0]?.id],
-    queryFn: async () => {
-      const wsId = workspacesQuery.data?.[0]?.id;
-      if (!wsId) return [];
-      const { data, error } = await supabase
-        .from("workspace_members")
-        .select("*, profile:profiles(display_name)")
-        .eq("workspace_id", wsId);
-      if (error) throw error;
-      return (data ?? []) as unknown as WorkspaceMember[];
-    },
-    enabled: !!user && !!workspacesQuery.data?.[0]?.id,
-  });
+  const getMembers = async (wsId: string) => {
+    const { data, error } = await supabase
+      .from("workspace_members")
+      .select("*, profile:profiles(display_name)")
+      .eq("workspace_id", wsId);
+    if (error) throw error;
+    return (data ?? []) as unknown as WorkspaceMember[];
+  };
 
   const invitesQuery = useQuery({
     queryKey: ["workspace-invites"],
@@ -154,7 +185,7 @@ export function useWorkspace() {
   return {
     workspaces: workspacesQuery.data ?? [],
     activeWorkspace,
-    members: membersQuery.data ?? [],
+    getMembers,
     invites: invitesQuery.data ?? [],
     pendingInvites,
     isLoading: workspacesQuery.isLoading,

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useWorkspace } from "@/hooks/useWorkspace";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -8,11 +9,23 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Send, Users, Trash2, Building2 } from "lucide-react";
 
-export default function WorkspaceManager() {
-  const { activeWorkspace, members, invites, createWorkspace, sendInvite, removeMember } = useWorkspace();
+interface WorkspaceManagerProps {
+  selectedWorkspaceId: string | null;
+}
+
+export default function WorkspaceManager({ selectedWorkspaceId }: WorkspaceManagerProps) {
+  const { workspaces, invites, createWorkspace, sendInvite, removeMember, getMembers } = useWorkspace();
   const { user } = useAuth();
   const [wsName, setWsName] = useState("");
   const [email, setEmail] = useState("");
+
+  const activeWorkspace = workspaces.find(w => w.id === selectedWorkspaceId) || workspaces[0];
+
+  const { data: members = [], isLoading: membersLoading } = useQuery({
+    queryKey: ["workspace-members", activeWorkspace?.id],
+    queryFn: () => getMembers(activeWorkspace!.id),
+    enabled: !!activeWorkspace?.id,
+  });
 
   if (!activeWorkspace) {
     return (

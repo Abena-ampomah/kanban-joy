@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { DragDropContext, DropResult } from "@hello-pangea/dnd";
 import { useTasks, Task } from "@/hooks/useTasks";
+import { useWorkspace } from "@/hooks/useWorkspace";
 import KanbanColumn from "./KanbanColumn";
 import AddTaskDialog from "./AddTaskDialog";
 import { Search, Plus } from "lucide-react";
@@ -13,12 +14,19 @@ const COLUMNS = [
   { id: "completed", title: "Completed", colorClass: "bg-kanban-completed/15 text-kanban-completed", bgClass: "bg-[hsl(var(--kanban-completed-bg))]" },
 ];
 
-export default function KanbanBoard() {
-  const { tasks, priorities, profiles, isLoading, createTask, updateTask, archiveTask } = useTasks();
+interface KanbanBoardProps {
+  workspaceId: string | null;
+}
+
+export default function KanbanBoard({ workspaceId }: KanbanBoardProps) {
+  const { tasks, priorities, profiles, isLoading, createTask, updateTask, archiveTask } = useTasks(workspaceId);
+  const { workspaces } = useWorkspace();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [defaultStatus, setDefaultStatus] = useState("todo");
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [search, setSearch] = useState("");
+
+  const activeWorkspace = workspaces.find(w => w.id === workspaceId);
 
   const filteredTasks = tasks.filter((t) =>
     t.title.toLowerCase().includes(search.toLowerCase()) ||
@@ -49,7 +57,9 @@ export default function KanbanBoard() {
       {/* Header */}
       <header className="px-6 py-4 border-b border-border bg-card/80 backdrop-blur-sm">
         <div className="flex items-center justify-between">
-          <h2 className="text-2xl font-display font-bold text-foreground">Kanban Dashboard</h2>
+          <h2 className="text-2xl font-display font-bold text-foreground">
+            {activeWorkspace ? activeWorkspace.name : "My Tasks"}
+          </h2>
           <div className="flex items-center gap-3">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -66,6 +76,7 @@ export default function KanbanBoard() {
           </div>
         </div>
       </header>
+// ... the rest of the file ...
 
       {/* Board */}
       <div className="flex-1 overflow-x-auto p-6">

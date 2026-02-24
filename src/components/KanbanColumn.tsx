@@ -39,7 +39,7 @@ export default function KanbanColumn({ id, title, tasks, colorClass, bgClass, on
           <div
             ref={provided.innerRef}
             {...provided.droppableProps}
-            className={`flex-1 space-y-3 p-2 rounded-xl transition-colors min-h-[200px] ${snapshot.isDraggingOver ? "bg-white/40" : ""
+            className={`flex-1 overflow-y-auto space-y-3 p-2 rounded-xl transition-colors min-h-[200px] scrollbar-thin ${snapshot.isDraggingOver ? "bg-white/40" : ""
               }`}
           >
             {tasks.map((task, index) => (

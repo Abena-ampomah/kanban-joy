@@ -5,17 +5,23 @@ import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 import ReactMarkdown from "react-markdown";
 import { motion, AnimatePresence } from "framer-motion";
 
 type Msg = { role: "user" | "assistant"; content: string };
 
-export default function AIChatbot() {
+interface AIChatbotProps {
+  workspaceId: string | null;
+}
+
+export default function AIChatbot({ workspaceId }: AIChatbotProps) {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const { session } = useAuth();
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -24,7 +30,7 @@ export default function AIChatbot() {
   }, [messages]);
 
   const send = async () => {
-    if (!input.trim() || loading) return;
+    if (!input.trim() || loading || !session) return;
     const userMsg: Msg = { role: "user", content: input.trim() };
     const allMsgs = [...messages, userMsg];
     setMessages(allMsgs);
@@ -33,15 +39,14 @@ export default function AIChatbot() {
 
     let assistantSoFar = "";
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const token = session?.access_token || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+      const token = session.access_token;
       const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-chat`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ messages: allMsgs }),
+        body: JSON.stringify({ messages: allMsgs, workspaceId }),
       });
 
       if (resp.status === 429) {

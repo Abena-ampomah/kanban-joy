@@ -5,20 +5,18 @@ import { useWorkspace } from "@/hooks/useWorkspace";
 interface AppSidebarProps {
   activeTab: string;
   onTabChange: (tab: string) => void;
+  selectedWorkspaceId: string | null;
+  onWorkspaceChange: (id: string | null) => void;
 }
 
-export default function AppSidebar({ activeTab, onTabChange }: AppSidebarProps) {
+export default function AppSidebar({ activeTab, onTabChange, selectedWorkspaceId, onWorkspaceChange }: AppSidebarProps) {
   const { displayName, role, signOut } = useAuth();
-  const { activeWorkspace, pendingInvites } = useWorkspace();
+  const { workspaces, pendingInvites } = useWorkspace();
 
-  const navItems = [
-    { id: "kanban", label: "Kanban Board", icon: LayoutDashboard },
-    { id: "archive", label: "Archive", icon: Archive },
-    ...(role === "manager"
-      ? [{ id: "workspace", label: "Workspace", icon: Building2 }]
-      : [{ id: "invites", label: `Invites${pendingInvites.length > 0 ? ` (${pendingInvites.length})` : ""}`, icon: Mail }]
-    ),
-  ];
+  const handleWorkspaceSelect = (id: string | null) => {
+    onWorkspaceChange(id);
+    onTabChange("kanban");
+  };
 
   return (
     <aside className="hidden md:flex w-64 flex-col gradient-sidebar text-sidebar-foreground">
@@ -27,23 +25,65 @@ export default function AppSidebar({ activeTab, onTabChange }: AppSidebarProps) 
           <LayoutDashboard className="h-7 w-7" />
           <h1 className="text-xl font-display font-bold">TaskFlow</h1>
         </div>
-        {activeWorkspace && (
-          <p className="text-xs mt-2 opacity-70 truncate">{activeWorkspace.name}</p>
-        )}
       </div>
 
-      <nav className="flex-1 px-4 space-y-1">
-        {navItems.map((item) => (
-          <button
-            key={item.id}
-            onClick={() => onTabChange(item.id)}
-            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${activeTab === item.id ? "bg-sidebar-accent/30" : "hover:bg-sidebar-accent/20"
-              }`}
-          >
-            <item.icon className="h-4 w-4" />
-            <span className="text-sm font-medium">{item.label}</span>
-          </button>
-        ))}
+      <nav className="flex-1 px-4 overflow-y-auto space-y-6">
+        <div>
+          <p className="px-3 text-[10px] font-bold uppercase tracking-wider opacity-50 mb-2">Main</p>
+          <div className="space-y-1">
+            <button
+              onClick={() => handleWorkspaceSelect(null)}
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${activeTab === "kanban" && selectedWorkspaceId === null ? "bg-sidebar-accent/30 text-white" : "hover:bg-sidebar-accent/20"
+                }`}
+            >
+              <User className="h-4 w-4" />
+              <span className="text-sm font-medium">My Tasks</span>
+            </button>
+            <button
+              onClick={() => onTabChange("archive")}
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${activeTab === "archive" ? "bg-sidebar-accent/30 text-white" : "hover:bg-sidebar-accent/20"
+                }`}
+            >
+              <Archive className="h-4 w-4" />
+              <span className="text-sm font-medium">Archive</span>
+            </button>
+          </div>
+        </div>
+
+        <div>
+          <div className="flex items-center justify-between px-3 mb-2">
+            <p className="text-[10px] font-bold uppercase tracking-wider opacity-50">Workspaces</p>
+            {role === "manager" && (
+              <button onClick={() => onTabChange("workspace")} title="Manage Workspaces">
+                <Building2 className="h-3 w-3 opacity-50 hover:opacity-100" />
+              </button>
+            )}
+          </div>
+          <div className="space-y-1">
+            {workspaces.map((ws) => (
+              <button
+                key={ws.id}
+                onClick={() => handleWorkspaceSelect(ws.id)}
+                className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${activeTab === "kanban" && selectedWorkspaceId === ws.id ? "bg-sidebar-accent/30 text-white" : "hover:bg-sidebar-accent/20"
+                  }`}
+              >
+                <Building2 className="h-4 w-4 text-primary-foreground/70" />
+                <span className="text-sm font-medium truncate">{ws.name}</span>
+              </button>
+            ))}
+
+            {role !== "manager" && (
+              <button
+                onClick={() => onTabChange("invites")}
+                className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${activeTab === "invites" ? "bg-sidebar-accent/30 text-white" : "hover:bg-sidebar-accent/20"
+                  }`}
+              >
+                <Mail className="h-4 w-4" />
+                <span className="text-sm font-medium">Invites {pendingInvites.length > 0 && `(${pendingInvites.length})`}</span>
+              </button>
+            )}
+          </div>
+        </div>
       </nav>
 
       <div className="p-4 border-t border-sidebar-accent/30">

@@ -25,12 +25,20 @@ async function getUser(authHeader: string) {
 }
 
 // Fetch tasks using the USER'S permissions (RLS)
-async function fetchTaskContext(authHeader: string) {
+async function fetchTaskContext(authHeader: string, workspaceId: string | null) {
   const supabase = getUserClient(authHeader);
-  const { data: tasks, error } = await supabase
+  let query = supabase
     .from("tasks")
     .select("id, title, description, status, priority:task_priorities(name)")
-    .eq("is_archived", false)
+    .eq("is_archived", false);
+
+  if (workspaceId) {
+    query = query.eq("workspace_id", workspaceId);
+  } else {
+    query = query.is("workspace_id", null);
+  }
+
+  const { data: tasks, error } = await query
     .order("created_at", { ascending: false })
     .limit(50); // Context window limit
 
@@ -39,8 +47,9 @@ async function fetchTaskContext(authHeader: string) {
     return "";
   }
 
-  if (!tasks?.length) return "";
-  return "\n\nCurrent tasks (visible to you):\n" + tasks.map((t: { id: string, title: string, status: string, priority?: { name?: string } }) =>
+  if (!tasks?.length) return workspaceId ? "The current workspace is empty." : "Your personal task list is empty.";
+  const wsContext = workspaceId ? "(in this workspace)" : "(personal)";
+  return `\n\nCurrent tasks ${wsContext}:\n` + tasks.map((t: { id: string, title: string, status: string, priority?: { name?: string } }) =>
     `- [${t.id}] "${t.title}" (status: ${t.status}, priority: ${t.priority?.name || "none"})`
   ).join("\n");
 }
@@ -84,7 +93,7 @@ const tools = [
 ];
 
 
-async function executeToolCalls(toolCalls: { function: { name: string, arguments: string } }[], authHeader: string) {
+async function executeToolCalls(toolCalls: { function: { name: string, arguments: string } }[], authHeader: string, workspaceId: string | null) {
   const supabase = getUserClient(authHeader);
   const results: string[] = [];
 
@@ -99,7 +108,6 @@ async function executeToolCalls(toolCalls: { function: { name: string, arguments
 
       const { error } = await supabase.from("tasks").update(updates).eq("id", args.task_id);
       if (error) {
-        // This will now catch RLS errors if the user tries to update a task they don't own/manage
         results.push(`❌ Failed to update task: ${error.message}`);
       } else {
         if (args.status) results.push(`✅ Task moved to **${args.status.replace("_", " ")}**!`);
@@ -120,12 +128,14 @@ async function executeToolCalls(toolCalls: { function: { name: string, arguments
         title: args.title,
         description: args.description || "",
         status: args.status || "todo",
+        workspace_id: workspaceId,
         created_by: user.id,
       });
       if (error) {
         results.push(`❌ Failed to create task: ${error.message}`);
       } else {
-        results.push(`✅ Task "${args.title}" created!`);
+        const target = workspaceId ? "in this workspace" : "in your personal list";
+        results.push(`✅ Task "${args.title}" created ${target}!`);
         results.push("[TASK_CREATED]");
       }
     }
@@ -138,15 +148,15 @@ serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { messages } = await req.json();
+    const { messages, workspaceId } = await req.json();
     const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
     if (!GEMINI_API_KEY) throw new Error("GEMINI_API_KEY not configured");
 
     const authHeader = req.headers.get("Authorization") || "";
     const user = await getUser(authHeader);
-    console.log("User resolved:", user?.id || "no user");
+    console.log("User resolved:", user?.id || "no user", "Workspace:", workspaceId || "none");
 
-    const taskContext = await fetchTaskContext(authHeader);
+    const taskContext = await fetchTaskContext(authHeader, workspaceId);
     console.log("Task context length:", taskContext.length);
 
     const systemPrompt = `You are TaskFlow AI, an intelligent task management assistant. You help users manage their kanban board tasks.
@@ -163,10 +173,9 @@ ${taskContext}
 Be concise, helpful, and friendly. Use markdown for formatting.`;
 
     // First call: let the model decide if it needs tools
-    const firstResponse = await fetch(AI_URL, {
+    const firstResponse = await fetch(`${AI_URL}?key=${GEMINI_API_KEY}`, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${GEMINI_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
@@ -178,9 +187,11 @@ Be concise, helpful, and friendly. Use markdown for formatting.`;
     });
 
     if (!firstResponse.ok) {
+      const errorText = await firstResponse.text();
+      console.error("AI gateway error:", firstResponse.status, errorText);
       if (firstResponse.status === 429) return new Response(JSON.stringify({ error: "Rate limited" }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       if (firstResponse.status === 402) return new Response(JSON.stringify({ error: "Payment required" }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-      throw new Error("AI gateway error: " + firstResponse.status);
+      throw new Error(`AI gateway error: ${firstResponse.status} - ${errorText.slice(0, 100)}`);
     }
 
     const aiResult = await firstResponse.json();
@@ -188,10 +199,9 @@ Be concise, helpful, and friendly. Use markdown for formatting.`;
 
     // If no tool calls, stream a normal response
     if (!choice?.message?.tool_calls?.length) {
-      const streamResponse = await fetch(AI_URL, {
+      const streamResponse = await fetch(`${AI_URL}?key=${GEMINI_API_KEY}`, {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${GEMINI_API_KEY}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
@@ -207,7 +217,7 @@ Be concise, helpful, and friendly. Use markdown for formatting.`;
     }
 
     // Execute tool calls
-    const toolResults = await executeToolCalls(choice.message.tool_calls, authHeader);
+    const toolResults = await executeToolCalls(choice.message.tool_calls, authHeader, workspaceId);
 
     // Build tool call result messages for the follow-up
     const toolMessages = choice.message.tool_calls.map((tc: { id: string }) => ({
@@ -217,10 +227,9 @@ Be concise, helpful, and friendly. Use markdown for formatting.`;
     }));
 
     // Stream the final response with tool results context
-    const streamResponse = await fetch(AI_URL, {
+    const streamResponse = await fetch(`${AI_URL}?key=${GEMINI_API_KEY}`, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${GEMINI_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({

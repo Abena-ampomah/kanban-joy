@@ -48,36 +48,67 @@ function fireConfetti() {
   confetti({ ...defaults, particleCount: count * 0.1, spread: 120, startVelocity: 45 });
 }
 
-export function useTasks() {
+export interface Profile {
+  id: string;
+  display_name: string;
+}
+
+export function useTasks(workspaceId?: string | null) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
   const tasksQuery = useQuery({
-    queryKey: ["tasks", { archived: false }],
+    queryKey: ["tasks", { archived: false, workspaceId }],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from("tasks")
-        .select("*, priority:task_priorities(*)")
-        .eq("is_archived", false)
+        .select(`
+          id, title, description, status, priority_id, assignee_id, workspace_id, due_date, 
+          is_archived, archived_at, created_by, created_at, updated_at,
+          priority:task_priorities(id, name, color)
+        `)
+        .eq("is_archived", false);
+
+      if (workspaceId) {
+        query = query.eq("workspace_id", workspaceId);
+      } else {
+        query = query.is("workspace_id", null);
+      }
+
+      const { data, error } = await query
         .order("created_at", { ascending: false })
         .limit(100);
+
       if (error) throw error;
-      return (data ?? []) as unknown as Task[];
+      return (data || []) as Task[];
     },
     enabled: !!user,
   });
 
   const archivedTasksQuery = useQuery({
-    queryKey: ["tasks", { archived: true }],
+    queryKey: ["tasks", { archived: true, workspaceId }],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from("tasks")
-        .select("*, priority:task_priorities(*)")
-        .eq("is_archived", true)
+        .select(`
+          id, title, description, status, priority_id, assignee_id, workspace_id, due_date, 
+          is_archived, archived_at, created_by, created_at, updated_at,
+          priority:task_priorities(id, name, color)
+        `)
+        .eq("is_archived", true);
+
+      if (workspaceId) {
+        query = query.eq("workspace_id", workspaceId);
+      } else {
+        query = query.is("workspace_id", null);
+      }
+
+      const { data, error } = await query
         .order("archived_at", { ascending: false });
+
       if (error) throw error;
-      return (data ?? []) as unknown as Task[];
+      return (data || []) as Task[];
     },
     enabled: !!user,
   });
@@ -97,14 +128,17 @@ export function useTasks() {
     queryFn: async () => {
       const { data, error } = await supabase.from("profiles").select("id, display_name");
       if (error) throw error;
-      return data;
+      return (data || []) as Profile[];
     },
     enabled: !!user,
   });
-
   const createTask = useMutation({
-    mutationFn: async (task: { title: string; description?: string; status?: string; priority_id?: string; assignee_id?: string; due_date?: string; workspace_id?: string }) => {
-      const { error } = await supabase.from("tasks").insert({ ...task, created_by: user!.id });
+    mutationFn: async (task: { title: string; description?: string; status?: string; priority_id?: string; assignee_id?: string; due_date?: string }) => {
+      const { error } = await supabase.from("tasks").insert({
+        ...task,
+        workspace_id: workspaceId || null,
+        created_by: user!.id
+      });
       if (error) throw error;
     },
     onSuccess: () => {
