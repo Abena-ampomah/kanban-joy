@@ -2,7 +2,6 @@ import { useState, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Mic, MicOff, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
 
 interface Props {
   onTranscript: (text: string) => void;
@@ -10,7 +9,7 @@ interface Props {
   onToggle: () => void;
 }
 
-export default function MeetingTranscriber({ onTranscript, isActive, onToggle }: Props) {
+export default function MeetingTranscriber({ onTranscript, isActive: _isActive, onToggle: _onToggle }: Props) {
   const [recording, setRecording] = useState(false);
   const [connecting, setConnecting] = useState(false);
   const { toast } = useToast();

@@ -1,4 +1,4 @@
-import { LayoutDashboard, LogOut, User, Shield, Building2, Users, Mail, Archive } from "lucide-react";
+import { LayoutDashboard, LogOut, User, Shield, Building2, Mail, Archive } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWorkspace } from "@/hooks/useWorkspace";
 

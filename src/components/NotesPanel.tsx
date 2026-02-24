@@ -7,13 +7,11 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import {
-  StickyNote, Plus, Trash2, ChevronLeft, Mic, MicOff, Sparkles, Loader2, Link2, X
+  StickyNote, Plus, Trash2, ChevronLeft, Mic, Sparkles, Loader2, Link2
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
 import MeetingTranscriber from "./MeetingTranscriber";
 
 export default function NotesPanel() {
@@ -71,7 +69,6 @@ export default function NotesPanel() {
 
   // Note detail view
   if (selectedNote) {
-    const linkedTask = tasks.find((t) => t.id === selectedNote.task_id);
     return (
       <div className="w-full bg-card flex flex-col h-full">
         <div className="px-4 py-3 border-b border-border flex items-center gap-2">

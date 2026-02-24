@@ -120,7 +120,9 @@ export function useTasks(workspaceId?: string) {
           .select("profiles(id, display_name)")
           .eq("workspace_id", workspaceId);
         if (error) throw error;
-        return (data as any[]).map(m => m.profiles).filter(Boolean);
+        return (data as unknown as { profiles: { id: string; display_name: string } | null }[])
+          .map(m => m.profiles)
+          .filter(Boolean);
       } else {
         const { data, error } = await supabase
           .from("profiles")

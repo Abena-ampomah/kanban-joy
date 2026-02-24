@@ -1,10 +1,9 @@
 import { Draggable } from "@hello-pangea/dnd";
 import { Task, TaskUpdate } from "@/hooks/useTasks";
-import { MoreHorizontal, Trash2, Edit2, CalendarDays, AlertCircle, Archive } from "lucide-react";
+import { MoreHorizontal, Edit2, CalendarDays, AlertCircle, Archive } from "lucide-react";
 import { format, isPast, isToday } from "date-fns";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { motion } from "framer-motion";
 
 interface TaskCardProps {
   task: Task;

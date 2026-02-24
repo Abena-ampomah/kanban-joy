@@ -2,7 +2,7 @@ import { Task } from "@/hooks/useTasks";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { RefreshCcw, Trash2, CalendarDays, Archive, Trash } from "lucide-react";
+import { RefreshCcw, CalendarDays, Archive, Trash } from "lucide-react";
 import { format } from "date-fns";
 
 interface ArchivePanelProps {
