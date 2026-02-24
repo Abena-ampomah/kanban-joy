@@ -20,7 +20,6 @@ export default function NotesPanel() {
   const { tasks } = useTasks(activeWorkspace?.id);
   const { toast } = useToast();
   const [selectedNote, setSelectedNote] = useState<Note | null>(null);
-  const [showTranscriber, setShowTranscriber] = useState(false);
   const [summarizing, setSummarizing] = useState(false);
 
   const handleCreate = async (isMeeting = false) => {
@@ -29,7 +28,6 @@ export default function NotesPanel() {
       is_meeting_note: isMeeting,
     });
     setSelectedNote(result);
-    if (isMeeting) setShowTranscriber(true);
   };
 
   const handleSummarize = async () => {
@@ -74,7 +72,7 @@ export default function NotesPanel() {
     return (
       <div className="w-full bg-card flex flex-col h-full">
         <div className="px-4 py-3 border-b border-border flex items-center gap-2">
-          <button onClick={() => { setSelectedNote(null); setShowTranscriber(false); }} className="text-muted-foreground hover:text-foreground">
+          <button onClick={() => { setSelectedNote(null); }} className="text-muted-foreground hover:text-foreground">
             <ChevronLeft className="h-4 w-4" />
           </button>
           <Input

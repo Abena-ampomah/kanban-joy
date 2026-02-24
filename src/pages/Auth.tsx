@@ -24,7 +24,7 @@ export default function Auth() {
           email,
           password,
           options: {
-            emailRedirectTo: window.location.origin,
+            emailRedirectTo: globalThis.location.origin,
             data: { display_name: displayName, role },
           },
         });
