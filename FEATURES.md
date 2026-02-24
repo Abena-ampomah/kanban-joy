@@ -49,8 +49,9 @@ This document outlines the features currently implemented in the Kanban Joy appl
 | Feature | Status | Notes |
 | :--- | :--- | :--- |
 | Auth | ✅ Working | Standard Supabase flow. |
-| Kanban Board | ⚠️ Issue | Restricted by RLS recursion bug in some workspace configurations. |
-| Workspaces | ❌ Broken | RLS `infinite recursion` error on `workspace_members`. |
-| AI Chatbot | ✅ Working | Functional, but dependent on task RLS status. |
-| Transcription | ✅ Working | Requires valid ElevenLabs API key/token. |
-| Notes | ✅ Working | Basic CRUD is operational. |
+| Kanban Board | ✅ Working | Full drag-and-drop and RLS security verified. |
+| Workspaces | ✅ Working | RLS recursion fixed; manager/member roles fully functional. |
+| Task Archive | ✅ Working | Soft-delete with 6-month auto-cleanup system. |
+| AI Chatbot | ✅ Working | Fully context-aware of tasks and workspace. |
+| Transcription | ✅ Working | Real-time via ElevenLabs Scribe V2. |
+| Notes | ✅ Working | CRUD and AI summarization operational. |

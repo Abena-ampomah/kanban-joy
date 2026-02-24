@@ -80,7 +80,7 @@ export default function Auth() {
               <>
                 <div>
                   <Label htmlFor="name">Display Name</Label>
-                  <Input id="name" value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder="Your name" required className="mt-1" />
+                  <Input id="name" value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder="Your name" required className="mt-1" autoComplete="name" />
                 </div>
                 <div>
                   <Label>Role</Label>
@@ -109,11 +109,11 @@ export default function Auth() {
             )}
             <div>
               <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" required className="mt-1" />
+              <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" required className="mt-1" autoComplete="email" />
             </div>
             <div>
               <Label htmlFor="password">Password</Label>
-              <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" required minLength={6} className="mt-1" />
+              <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" required minLength={6} className="mt-1" autoComplete={isSignUp ? "new-password" : "current-password"} />
             </div>
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? "Loading..." : isSignUp ? "Create Account" : "Sign In"}
