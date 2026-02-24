@@ -85,7 +85,7 @@ const tools = [
 ];
 
 
-async function executeToolCalls(toolCalls: { function: { name: string, arguments: string } }[], authHeader: string, workspaceId?: string) {
+async function executeToolCalls(toolCalls: { function: { name: string, arguments: string } }[], authHeader: string, user: { id: string } | null, workspaceId?: string) {
   const supabase = getUserClient(authHeader);
   const results: string[] = [];
 
@@ -111,7 +111,6 @@ async function executeToolCalls(toolCalls: { function: { name: string, arguments
     }
 
     if (tc.function.name === "create_task") {
-      const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         results.push("❌ Error: Could not identify user.");
         continue;
@@ -209,7 +208,7 @@ Be concise, helpful, and friendly. Use markdown for formatting.`;
     }
 
     // Execute tool calls
-    const toolResults = await executeToolCalls(choice.message.tool_calls, authHeader, workspaceId);
+    const toolResults = await executeToolCalls(choice.message.tool_calls, authHeader, user, workspaceId);
 
     // Build tool call result messages for the follow-up
     const toolMessages = choice.message.tool_calls.map((tc: { id: string }) => ({

@@ -49,7 +49,7 @@ function fireConfetti() {
   confetti({ ...defaults, particleCount: count * 0.1, spread: 120, startVelocity: 45 });
 }
 
-export function useTasks(workspaceId?: string) {
+export function useTasks(workspaceId?: string | "all") {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -62,7 +62,9 @@ export function useTasks(workspaceId?: string) {
         .select("*, priority:task_priorities(*), assignee:profiles(id, display_name)")
         .eq("is_archived", false);
 
-      if (workspaceId) {
+      if (workspaceId === "all") {
+        // No workspace filter
+      } else if (workspaceId) {
         query = query.eq("workspace_id", workspaceId);
       } else {
         query = query.is("workspace_id", null);
@@ -86,7 +88,9 @@ export function useTasks(workspaceId?: string) {
         .select("*, priority:task_priorities(*), assignee:profiles(id, display_name)")
         .eq("is_archived", true);
 
-      if (workspaceId) {
+      if (workspaceId === "all") {
+        // No workspace filter
+      } else if (workspaceId) {
         query = query.eq("workspace_id", workspaceId);
       } else {
         query = query.is("workspace_id", null);
@@ -114,7 +118,7 @@ export function useTasks(workspaceId?: string) {
   const profilesQuery = useQuery({
     queryKey: ["profiles", { workspaceId }],
     queryFn: async () => {
-      if (workspaceId) {
+      if (workspaceId && workspaceId !== "all") {
         const { data, error } = await supabase
           .from("workspace_members")
           .select("profiles(id, display_name)")

@@ -16,8 +16,8 @@ import { useWorkspace } from "@/hooks/useWorkspace";
 export default function Index() {
   const { user, loading, role } = useAuth();
   const { activeWorkspace } = useWorkspace();
-  const { archivedTasks, restoreTask, deleteTask, isLoading: tasksLoading } = useTasks(activeWorkspace?.id);
   const [activeTab, setActiveTab] = useState("kanban");
+  const { archivedTasks, restoreTask, deleteTask, isLoading: tasksLoading } = useTasks(activeTab === "archive" ? "all" : activeWorkspace?.id);
 
   if (loading) {
     return (
