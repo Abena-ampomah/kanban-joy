@@ -31,7 +31,7 @@ export default function TaskCard({ task, index, onUpdate, onDelete, onEdit }: Ta
           ref={provided.innerRef}
           {...provided.draggableProps}
           {...provided.dragHandleProps}
-          className={`bg-card rounded-lg p-4 task-card-hover kanban-shadow border border-border/60 ${snapshot.isDragging ? "shadow-xl ring-2 ring-primary/30 rotate-2" : ""
+          className={`bg-card rounded-lg p-4 task-card-hover kanban-shadow border border-border/60 ${snapshot.isDragging ? "shadow-xl ring-2 ring-primary/30 rotate-2 !transition-none" : ""
             }`}
         >
           <div className="flex items-start justify-between gap-2 mb-2">

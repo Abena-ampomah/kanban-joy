@@ -76,7 +76,6 @@ export default function KanbanBoard({ workspaceId }: KanbanBoardProps) {
           </div>
         </div>
       </header>
-// ... the rest of the file ...
 
       {/* Board */}
       <div className="flex-1 overflow-x-auto p-6">

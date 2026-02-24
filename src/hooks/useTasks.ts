@@ -161,10 +161,30 @@ export function useTasks(workspaceId?: string | null) {
       if (error) throw error;
       if (updates.status === "completed") fireConfetti();
     },
-    onSuccess: () => {
+    onMutate: async (newUpdate) => {
+      // Cancel refetches to avoid overwriting optimistic update
+      await queryClient.cancelQueries({ queryKey: ["tasks"] });
+
+      // Snapshot the previous value
+      const previousTasks = queryClient.getQueryData(["tasks", { archived: false, workspaceId }]);
+
+      // Optimistically update to the new value
+      queryClient.setQueryData(["tasks", { archived: false, workspaceId }], (old: Task[] | undefined) => {
+        if (!old) return [];
+        return old.map((t) => (t.id === newUpdate.id ? { ...t, ...newUpdate } : t)) as Task[];
+      });
+
+      return { previousTasks };
+    },
+    onError: (err, newUpdate, context) => {
+      // If the mutation fails, use the context returned from onMutate to roll back
+      queryClient.setQueryData(["tasks", { archived: false, workspaceId }], context?.previousTasks);
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    },
+    onSettled: () => {
+      // Always refetch after error or success to synchronize with server
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
     },
-    onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
   const deleteTask = useMutation({

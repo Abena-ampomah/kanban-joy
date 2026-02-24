@@ -34,28 +34,32 @@ export default function KanbanColumn({ id, title, tasks, colorClass, bgClass, on
         </button>
       </div>
 
-      <Droppable droppableId={id}>
-        {(provided, snapshot) => (
-          <div
-            ref={provided.innerRef}
-            {...provided.droppableProps}
-            className={`flex-1 overflow-y-auto space-y-3 p-2 rounded-xl transition-colors min-h-[200px] scrollbar-thin ${snapshot.isDraggingOver ? "bg-white/40" : ""
-              }`}
-          >
-            {tasks.map((task, index) => (
-              <TaskCard
-                key={task.id}
-                task={task}
-                index={index}
-                onUpdate={onUpdateTask}
-                onDelete={onDeleteTask}
-                onEdit={onEditTask}
-              />
-            ))}
-            {provided.placeholder}
-          </div>
-        )}
-      </Droppable>
+      <div className="flex-1 overflow-hidden">
+        <div className="h-full overflow-y-auto pr-1 -mr-1 scrollbar-thin">
+          <Droppable droppableId={id}>
+            {(provided, snapshot) => (
+              <div
+                ref={provided.innerRef}
+                {...provided.droppableProps}
+                className={`space-y-3 p-2 rounded-xl transition-colors min-h-[150px] ${snapshot.isDraggingOver ? "bg-white/40" : ""
+                  }`}
+              >
+                {tasks.map((task, index) => (
+                  <TaskCard
+                    key={task.id}
+                    task={task}
+                    index={index}
+                    onUpdate={onUpdateTask}
+                    onDelete={onDeleteTask}
+                    onEdit={onEditTask}
+                  />
+                ))}
+                {provided.placeholder}
+              </div>
+            )}
+          </Droppable>
+        </div>
+      </div>
     </div>
   );
 }
