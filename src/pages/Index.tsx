@@ -11,11 +11,13 @@ import ArchivePanel from "@/components/ArchivePanel";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LayoutDashboard, StickyNote } from "lucide-react";
 import { useTasks } from "@/hooks/useTasks";
+import { useWorkspace } from "@/hooks/useWorkspace";
 
 export default function Index() {
   const { user, loading, role } = useAuth();
-  const { archivedTasks, restoreTask, deleteTask, isLoading: tasksLoading } = useTasks();
+  const { activeWorkspace } = useWorkspace();
   const [activeTab, setActiveTab] = useState("kanban");
+  const { archivedTasks, restoreTask, deleteTask, isLoading: tasksLoading } = useTasks(activeTab === "archive" ? "all" : activeWorkspace?.id);
 
   if (loading) {
     return (

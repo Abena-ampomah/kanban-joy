@@ -19,6 +19,7 @@ export interface Task {
   created_at: string;
   updated_at: string;
   priority?: { id: string; name: string; color: string } | null;
+  assignee?: { id: string; display_name: string } | null;
 }
 
 export interface TaskUpdate {
@@ -48,20 +49,31 @@ function fireConfetti() {
   confetti({ ...defaults, particleCount: count * 0.1, spread: 120, startVelocity: 45 });
 }
 
-export function useTasks() {
+export function useTasks(workspaceId?: string | "all") {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
   const tasksQuery = useQuery({
-    queryKey: ["tasks", { archived: false }],
+    queryKey: ["tasks", { archived: false, workspaceId }],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from("tasks")
-        .select("*, priority:task_priorities(*)")
-        .eq("is_archived", false)
+        .select("*, priority:task_priorities(*), assignee:profiles(id, display_name)")
+        .eq("is_archived", false);
+
+      if (workspaceId === "all") {
+        // No workspace filter
+      } else if (workspaceId) {
+        query = query.eq("workspace_id", workspaceId);
+      } else {
+        query = query.is("workspace_id", null);
+      }
+
+      const { data, error } = await query
         .order("created_at", { ascending: false })
         .limit(100);
+
       if (error) throw error;
       return (data ?? []) as unknown as Task[];
     },
@@ -69,13 +81,24 @@ export function useTasks() {
   });
 
   const archivedTasksQuery = useQuery({
-    queryKey: ["tasks", { archived: true }],
+    queryKey: ["tasks", { archived: true, workspaceId }],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from("tasks")
-        .select("*, priority:task_priorities(*)")
-        .eq("is_archived", true)
+        .select("*, priority:task_priorities(*), assignee:profiles(id, display_name)")
+        .eq("is_archived", true);
+
+      if (workspaceId === "all") {
+        // No workspace filter
+      } else if (workspaceId) {
+        query = query.eq("workspace_id", workspaceId);
+      } else {
+        query = query.is("workspace_id", null);
+      }
+
+      const { data, error } = await query
         .order("archived_at", { ascending: false });
+
       if (error) throw error;
       return (data ?? []) as unknown as Task[];
     },
@@ -93,18 +116,37 @@ export function useTasks() {
   });
 
   const profilesQuery = useQuery({
-    queryKey: ["profiles"],
+    queryKey: ["profiles", { workspaceId }],
     queryFn: async () => {
-      const { data, error } = await supabase.from("profiles").select("id, display_name");
-      if (error) throw error;
-      return data;
+      if (workspaceId && workspaceId !== "all") {
+        const { data, error } = await supabase
+          .from("workspace_members")
+          .select("profiles(id, display_name)")
+          .eq("workspace_id", workspaceId);
+        if (error) throw error;
+        return (data as unknown as { profiles: { id: string; display_name: string } | null }[])
+          .map(m => m.profiles)
+          .filter(Boolean);
+      } else {
+        const { data, error } = await supabase
+          .from("profiles")
+          .select("id, display_name")
+          .eq("id", user!.id);
+        if (error) throw error;
+        return data;
+      }
     },
     enabled: !!user,
   });
 
   const createTask = useMutation({
     mutationFn: async (task: { title: string; description?: string; status?: string; priority_id?: string; assignee_id?: string; due_date?: string; workspace_id?: string }) => {
-      const { error } = await supabase.from("tasks").insert({ ...task, created_by: user!.id });
+      const payload = {
+        ...task,
+        created_by: user!.id,
+        workspace_id: task.workspace_id || workspaceId || null
+      };
+      const { error } = await supabase.from("tasks").insert(payload);
       if (error) throw error;
     },
     onSuccess: () => {
