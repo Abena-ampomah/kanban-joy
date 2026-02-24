@@ -25,16 +25,23 @@ async function getUser(authHeader: string) {
 }
 
 // Fetch tasks using the USER'S permissions (RLS)
-async function fetchTaskContext(authHeader: string) {
+async function fetchTaskContext(authHeader: string, workspaceId?: string) {
   const supabase = getUserClient(authHeader);
-  const { data: tasks } = await supabase
+  let query = supabase
     .from("tasks")
     .select("id, title, description, status, priority:task_priorities(name)")
-    .order("created_at", { ascending: false })
-    .limit(50); // Context window limit
+    .order("created_at", { ascending: false });
+
+  if (workspaceId) {
+    query = query.eq("workspace_id", workspaceId);
+  } else {
+    query = query.is("workspace_id", null);
+  }
+
+  const { data: tasks } = await query.limit(50); // Context window limit
 
   if (!tasks?.length) return "";
-  return "\n\nCurrent tasks (visible to you):\n" + tasks.map((t: { id: string, title: string, status: string, priority?: { name?: string } }) =>
+  return `\n\nCurrent tasks in ${workspaceId ? "this workspace" : "your personal space"}:\n` + tasks.map((t: { id: string, title: string, status: string, priority?: { name?: string } }) =>
     `- [${t.id}] "${t.title}" (status: ${t.status}, priority: ${t.priority?.name || "none"})`
   ).join("\n");
 }
@@ -78,7 +85,7 @@ const tools = [
 ];
 
 
-async function executeToolCalls(toolCalls: { function: { name: string, arguments: string } }[], authHeader: string) {
+async function executeToolCalls(toolCalls: { function: { name: string, arguments: string } }[], authHeader: string, workspaceId?: string) {
   const supabase = getUserClient(authHeader);
   const results: string[] = [];
 
@@ -115,6 +122,7 @@ async function executeToolCalls(toolCalls: { function: { name: string, arguments
         description: args.description || "",
         status: args.status || "todo",
         created_by: user.id,
+        workspace_id: workspaceId || null,
       });
       if (error) {
         results.push(`❌ Failed to create task: ${error.message}`);
@@ -132,7 +140,7 @@ serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { messages } = await req.json();
+    const { messages, workspaceId } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
@@ -140,7 +148,7 @@ serve(async (req: Request) => {
     const user = await getUser(authHeader);
     console.log("User resolved:", user?.id || "no user");
 
-    const taskContext = await fetchTaskContext(authHeader);
+    const taskContext = await fetchTaskContext(authHeader, workspaceId);
     console.log("Task context length:", taskContext.length);
 
     const systemPrompt = `You are TaskFlow AI, an intelligent task management assistant. You help users manage their kanban board tasks.
@@ -201,7 +209,7 @@ Be concise, helpful, and friendly. Use markdown for formatting.`;
     }
 
     // Execute tool calls
-    const toolResults = await executeToolCalls(choice.message.tool_calls, authHeader);
+    const toolResults = await executeToolCalls(choice.message.tool_calls, authHeader, workspaceId);
 
     // Build tool call result messages for the follow-up
     const toolMessages = choice.message.tool_calls.map((tc: { id: string }) => ({

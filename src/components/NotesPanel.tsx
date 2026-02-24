@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNotes, Note } from "@/hooks/useNotes";
 import { useTasks } from "@/hooks/useTasks";
+import { useWorkspace } from "@/hooks/useWorkspace";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -16,8 +17,9 @@ import { supabase } from "@/integrations/supabase/client";
 import MeetingTranscriber from "./MeetingTranscriber";
 
 export default function NotesPanel() {
+  const { activeWorkspace } = useWorkspace();
   const { notes, isLoading, createNote, updateNote, deleteNote } = useNotes();
-  const { tasks } = useTasks();
+  const { tasks } = useTasks(activeWorkspace?.id);
   const { toast } = useToast();
   const [selectedNote, setSelectedNote] = useState<Note | null>(null);
   const [showTranscriber, setShowTranscriber] = useState(false);

@@ -94,9 +94,18 @@ export default function TaskCard({ task, index, onUpdate, onDelete, onEdit }: Ta
 
           <div className="flex items-center justify-between mt-3">
             <div className="flex items-center gap-1.5">
-              <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-bold text-primary">
-                ?
-              </div>
+              {task.assignee ? (
+                <div
+                  className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-bold text-primary"
+                  title={`Assigned to ${task.assignee.display_name}`}
+                >
+                  {task.assignee.display_name.charAt(0).toUpperCase()}
+                </div>
+              ) : (
+                <div className="h-6 w-6 rounded-full bg-muted flex items-center justify-center text-[10px] font-bold text-muted-foreground">
+                  ?
+                </div>
+              )}
             </div>
             <span className="text-[10px] text-muted-foreground">
               {new Date(task.created_at).toLocaleDateString()}

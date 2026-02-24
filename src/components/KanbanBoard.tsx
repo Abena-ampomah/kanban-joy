@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { DragDropContext, DropResult } from "@hello-pangea/dnd";
 import { useTasks, Task } from "@/hooks/useTasks";
+import { useWorkspace } from "@/hooks/useWorkspace";
 import KanbanColumn from "./KanbanColumn";
 import AddTaskDialog from "./AddTaskDialog";
 import { Search, Plus } from "lucide-react";
@@ -14,7 +15,8 @@ const COLUMNS = [
 ];
 
 export default function KanbanBoard() {
-  const { tasks, priorities, profiles, isLoading, createTask, updateTask, deleteTask } = useTasks();
+  const { activeWorkspace } = useWorkspace();
+  const { tasks, priorities, profiles, isLoading, createTask, updateTask, deleteTask } = useTasks(activeWorkspace?.id);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [defaultStatus, setDefaultStatus] = useState("todo");
   const [editingTask, setEditingTask] = useState<Task | null>(null);
