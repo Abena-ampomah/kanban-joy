@@ -7,7 +7,7 @@ const corsHeaders = {
 };
 
 const AI_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
-const MODEL = "google/gemini-2.0-flash-exp";
+const MODEL = "google/gemini-1.5-flash";
 
 // Helper to create a user-scoped Supabase client
 function getUserClient(authHeader: string) {
@@ -19,9 +19,19 @@ function getUserClient(authHeader: string) {
 }
 
 async function getUser(authHeader: string) {
+  if (!authHeader) return null;
   const client = getUserClient(authHeader);
-  const { data: { user } } = await client.auth.getUser();
-  return user;
+  try {
+    const { data, error } = await client.auth.getUser();
+    if (error) {
+      console.error("Auth error:", error.message);
+      return null;
+    }
+    return data?.user || null;
+  } catch (e) {
+    console.error("getUser unexpected error:", e);
+    return null;
+  }
 }
 
 // Fetch tasks using the USER'S permissions (RLS)
@@ -139,12 +149,24 @@ serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { messages, workspaceId } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+    if (!LOVABLE_API_KEY) {
+      return new Response(JSON.stringify({ error: "LOVABLE_API_KEY not configured" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
+    const { messages, workspaceId } = await req.json();
     const authHeader = req.headers.get("Authorization") || "";
     const user = await getUser(authHeader);
+
+    if (!user) {
+      return new Response(JSON.stringify({ error: "Unauthorized: Invalid or missing token" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     const taskContext = await fetchTaskContext(authHeader, workspaceId);
 
@@ -185,73 +207,81 @@ Be concise, helpful, and friendly. Use markdown for formatting.`;
     const aiResult = await firstResponse.json();
     const choice = aiResult.choices?.[0];
 
-    // If no tool calls, stream a normal response
+    // Handle standard chat vs tool execution
+    let streamResponse: Response;
+    let toolResultsPrefix = "";
+
     if (!choice?.message?.tool_calls?.length) {
-      const streamResponse = await fetch(AI_URL, {
+      streamResponse = await fetch(AI_URL, {
         method: "POST",
-        headers: {
-          Authorization: `Bearer ${LOVABLE_API_KEY}`,
-          "Content-Type": "application/json",
-        },
+        headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
         body: JSON.stringify({
           model: MODEL,
           messages: [{ role: "system", content: systemPrompt }, ...messages],
           stream: true,
         }),
       });
-      if (!streamResponse.ok) throw new Error("Stream error");
-      return new Response(streamResponse.body, {
-        headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
+    } else {
+      // Execute tool calls
+      const toolResults = await executeToolCalls(choice.message.tool_calls, authHeader, user, workspaceId);
+      toolResultsPrefix = toolResults + "\n\n";
+
+      // Build tool call result messages for the follow-up
+      const toolMessages = choice.message.tool_calls.map((tc: { id: string }) => ({
+        role: "tool",
+        tool_call_id: tc.id,
+        content: toolResults,
+      }));
+
+      // Get streaming response with tool context
+      streamResponse = await fetch(AI_URL, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: MODEL,
+          messages: [
+            { role: "system", content: systemPrompt },
+            ...messages,
+            choice.message,
+            ...toolMessages,
+          ],
+          stream: true,
+        }),
       });
     }
 
-    // Execute tool calls
-    const toolResults = await executeToolCalls(choice.message.tool_calls, authHeader, user, workspaceId);
+    if (!streamResponse.ok) {
+      const errText = await streamResponse.text();
+      throw new Error(`AI Gateway Error: ${streamResponse.status} - ${errText}`);
+    }
 
-    // Build tool call result messages for the follow-up
-    const toolMessages = choice.message.tool_calls.map((tc: { id: string }) => ({
-      role: "tool",
-      tool_call_id: tc.id,
-      content: toolResults,
-    }));
+    if (!streamResponse.body) {
+      throw new Error("AI Gateway returned an empty body.");
+    }
 
-    // Stream the final response with tool results context
-    const streamResponse = await fetch(AI_URL, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: MODEL,
-        messages: [
-          { role: "system", content: systemPrompt },
-          ...messages,
-          choice.message,
-          ...toolMessages,
-        ],
-        stream: true,
-      }),
-    });
-
-    if (!streamResponse.ok) throw new Error("Stream error");
-
-    // Prepend tool results, then stream
+    // Return SSE stream
     const encoder = new TextEncoder();
-    const toolChunk = `data: ${JSON.stringify({ choices: [{ delta: { content: toolResults + "\n\n" } }] })}\n\n`;
-
     const { readable, writable } = new TransformStream();
     const writer = writable.getWriter();
 
     (async () => {
-      await writer.write(encoder.encode(toolChunk));
-      const reader = streamResponse.body!.getReader();
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        await writer.write(value);
+      try {
+        if (toolResultsPrefix) {
+          const toolChunk = `data: ${JSON.stringify({ choices: [{ delta: { content: toolResultsPrefix } }] })}\n\n`;
+          await writer.write(encoder.encode(toolChunk));
+        }
+
+        const reader = streamResponse.body!.getReader();
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          await writer.write(value);
+        }
+      } catch (e) {
+        console.error("Stream writing error:", e);
+      } finally {
+        await writer.close();
       }
-      await writer.close();
     })();
 
     return new Response(readable, {

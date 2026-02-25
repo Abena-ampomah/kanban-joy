@@ -35,8 +35,9 @@ export default function AIChatbot() {
 
     let assistantSoFar = "";
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const token = session?.access_token || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+      const { data: authData } = await supabase.auth.getSession();
+      const token = authData.session?.access_token || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+
       const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-chat`, {
         method: "POST",
         headers: {
@@ -49,17 +50,27 @@ export default function AIChatbot() {
         }),
       });
 
-      if (resp.status === 429) {
-        toast({ title: "Rate limited", description: "Please try again in a moment.", variant: "destructive" });
+      if (!resp.ok) {
+        let msg = "Could not reach AI assistant.";
+        try {
+          const errData = await resp.json();
+          msg = errData.error || msg;
+        } catch {
+          // ignore parse error for error body
+        }
+
+        if (resp.status === 429) {
+          toast({ title: "Rate limited", description: "Please try again in a moment.", variant: "destructive" });
+        } else if (resp.status === 402) {
+          toast({ title: "Credits needed", description: "Please add credits to your workspace.", variant: "destructive" });
+        } else {
+          toast({ title: "AI Error", description: msg, variant: "destructive" });
+        }
         setLoading(false);
         return;
       }
-      if (resp.status === 402) {
-        toast({ title: "Credits needed", description: "Please add credits to your workspace.", variant: "destructive" });
-        setLoading(false);
-        return;
-      }
-      if (!resp.ok || !resp.body) throw new Error("Failed");
+
+      if (!resp.body) throw new Error("No response body received.");
 
       const reader = resp.body.getReader();
       const decoder = new TextDecoder();
@@ -67,9 +78,9 @@ export default function AIChatbot() {
 
       // Function to process a chunk of text
       const processLine = (line: string) => {
-        if (line.endsWith("\r")) line = line.slice(0, -1);
-        if (!line.startsWith("data: ") || line.trim() === "" || line.startsWith(":")) return false;
-        const jsonStr = line.slice(6).trim();
+        const cleanedLine = line.replace(/\r$/, "");
+        if (!cleanedLine.startsWith("data: ") || cleanedLine.trim() === "" || cleanedLine.startsWith(":")) return false;
+        const jsonStr = cleanedLine.slice(6).trim();
         if (jsonStr === "[DONE]") return true;
         try {
           const parsed = JSON.parse(jsonStr);
@@ -90,9 +101,10 @@ export default function AIChatbot() {
         return false;
       };
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) {
+      let done = false;
+      while (!done) {
+        const { done: readerDone, value } = await reader.read();
+        if (readerDone) {
           if (buf.length > 0) processLine(buf);
           break;
         }
@@ -101,7 +113,10 @@ export default function AIChatbot() {
         while ((nl = buf.indexOf("\n")) !== -1) {
           const line = buf.slice(0, nl);
           buf = buf.slice(nl + 1);
-          if (processLine(line)) break;
+          if (processLine(line)) {
+            done = true;
+            break;
+          }
         }
       }
 
@@ -110,8 +125,12 @@ export default function AIChatbot() {
         queryClient.invalidateQueries({ queryKey: ["tasks"] });
       }
     } catch (e) {
-      console.error(e);
-      toast({ title: "AI Error", description: "Could not reach AI assistant.", variant: "destructive" });
+      console.error("[AIChatbot] Error:", e);
+      toast({
+        title: "AI Connection Error",
+        description: e instanceof Error ? e.message : "Could not reach AI assistant.",
+        variant: "destructive"
+      });
     } finally {
       setLoading(false);
     }
