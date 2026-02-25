@@ -7,7 +7,7 @@ const corsHeaders = {
 };
 
 const AI_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
-const MODEL = "google/gemini-2.0-flash";
+const MODEL = "google/gemini-2.0-flash-exp";
 
 // Helper to create a user-scoped Supabase client
 function getUserClient(authHeader: string) {
@@ -145,10 +145,8 @@ serve(async (req: Request) => {
 
     const authHeader = req.headers.get("Authorization") || "";
     const user = await getUser(authHeader);
-    console.log("User resolved:", user?.id || "no user");
 
     const taskContext = await fetchTaskContext(authHeader, workspaceId);
-    console.log("Task context length:", taskContext.length);
 
     const systemPrompt = `You are TaskFlow AI, an intelligent task management assistant. You help users manage their kanban board tasks.
 

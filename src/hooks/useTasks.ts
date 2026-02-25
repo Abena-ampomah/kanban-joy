@@ -126,7 +126,7 @@ export function useTasks(workspaceId?: string | "all") {
         if (error) throw error;
         return (data as unknown as { profiles: { id: string; display_name: string } | null }[])
           .map(m => m.profiles)
-          .filter(Boolean);
+          .filter((p): p is { id: string; display_name: string } => !!p);
       } else {
         const { data, error } = await supabase
           .from("profiles")
