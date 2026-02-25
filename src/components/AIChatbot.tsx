@@ -170,7 +170,13 @@ export default function AIChatbot() {
                     }`}>
                     {m.role === "assistant" ? (
                       <div className="prose prose-sm max-w-none [&_p]:m-0">
-                        <ReactMarkdown>{m.content}</ReactMarkdown>
+                        <ReactMarkdown>
+                          {m.content
+                            .replace(/\[TASK_CREATED\]/g, "")
+                            .replace(/\[TASK_UPDATED\]/g, "")
+                            .replace(/\[TASK_MOVED\]/g, "")
+                            .trim()}
+                        </ReactMarkdown>
                       </div>
                     ) : m.content}
                   </div>
