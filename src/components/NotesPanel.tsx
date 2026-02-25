@@ -12,6 +12,7 @@ import {
   StickyNote, Plus, Trash2, ChevronLeft, Mic, Sparkles, Loader2, Link2
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 import MeetingTranscriber from "./MeetingTranscriber";
 
 export default function NotesPanel() {
